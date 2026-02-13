@@ -38,6 +38,9 @@ export default function AnalyzePage() {
                     setGeneratedAlerts(alerts);
                     setIsAnalyzing(false);
                     setComplete(true);
+
+                    // Trigger AI enrichment
+                    enrichAlertsWithAI(alerts);
                 }, 2000);
 
             } catch (error) {
@@ -48,6 +51,37 @@ export default function AnalyzePage() {
             }
         };
         reader.readAsText(file);
+    };
+
+    const enrichAlertsWithAI = async (currentAlerts: Alert[]) => {
+        // Dynamic import to avoid server-side issues
+        const { generateThreatExplanation } = await import("@/lib/groqClient");
+
+        // Process a few indicative alerts to save tokens/time
+        const criticalAlerts = currentAlerts
+            .filter(a => a.severity === "critical" || a.severity === "high")
+            .slice(0, 3);
+
+        for (const alert of criticalAlerts) {
+            try {
+                const aiResult = await generateThreatExplanation(alert);
+
+                // Update state with new info
+                setGeneratedAlerts(prev => prev.map(a => {
+                    if (a.id === alert.id) {
+                        return {
+                            ...a,
+                            aiExplanation: aiResult.explanation,
+                            aiConfidence: aiResult.confidence,
+                            recommendedAction: (a.recommendedAction || "") + "\n\n" + aiResult.mitigationSteps.join("\n")
+                        };
+                    }
+                    return a;
+                }));
+            } catch (e) {
+                console.error("AI enrichment failed", e);
+            }
+        }
     };
 
     return (
@@ -137,20 +171,46 @@ export default function AnalyzePage() {
                                         <div className="text-right">
                                             <div className="text-2xl font-bold">{alert.threatScore}</div>
                                             <div className="text-xs text-muted-foreground">Risk Score</div>
+                                            {alert.aiConfidence && (
+                                                <div className="text-xs font-bold text-blue-500 mt-1">AI: {alert.aiConfidence}%</div>
+                                            )}
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2 text-sm text-muted-foreground">
                                         <p><span className="font-semibold text-foreground">Source:</span> {alert.sourceIp}</p>
-                                        <p><span className="font-semibold text-foreground">Action:</span> {alert.recommendedAction}</p>
+
+                                        {alert.aiExplanation ? (
+                                            <div className="bg-muted/50 p-3 rounded border border-blue-200 dark:border-blue-900 my-2">
+                                                <div className="flex items-center gap-2 mb-1 text-blue-600 dark:text-blue-400 font-semibold">
+                                                    <span>🤖 AI Analysis</span>
+                                                </div>
+                                                <p className="whitespace-pre-wrap text-foreground text-xs leading-relaxed">{alert.aiExplanation}</p>
+                                            </div>
+                                        ) : (
+                                            (alert.severity === "high" || alert.severity === "critical") && (
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground italic my-2">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Generating AI explanation...
+                                                </div>
+                                            )
+                                        )}
+
                                         <div>
                                             <span className="font-semibold text-foreground">Evidence:</span>
-                                            <ul className="list-disc pl-4 mt-1">
+                                            <ul className="list-disc pl-4 mt-1 text-xs">
                                                 {alert.evidence?.map((e, i) => (
                                                     <li key={i}>{e}</li>
                                                 ))}
                                             </ul>
+                                        </div>
+
+                                        <div className="mt-2 text-xs">
+                                            <span className="font-semibold text-foreground">Recommended Action:</span>
+                                            <pre className="whitespace-pre-wrap font-sans mt-1 bg-red-50 dark:bg-red-950/30 p-2 rounded border border-red-200 dark:border-red-900 text-red-800 dark:text-red-200">
+                                                {alert.recommendedAction}
+                                            </pre>
                                         </div>
                                     </div>
                                 </CardContent>

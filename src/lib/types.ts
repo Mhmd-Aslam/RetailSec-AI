@@ -10,5 +10,7 @@ export interface Alert {
   threatType?: string;
   threatScore?: number;
   evidence?: string[];
-  recommendedAction?: string;
+  recommendedAction?: string; // AI generated mitigation steps can go here or appending to this
+  aiExplanation?: string;
+  aiConfidence?: number;
 }
