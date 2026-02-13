@@ -318,10 +318,7 @@ export default function DashboardPage() {
                                             <tr key={alert.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                                 <td className="p-4 align-middle">
                                                     <Badge
-                                                        variant={
-                                                            alert.severity === "critical" || alert.severity === "high" ? "destructive" :
-                                                                alert.severity === "medium" ? "secondary" : "outline"
-                                                        }
+                                                        variant={alert.severity as "critical" | "high" | "medium" | "low"}
                                                         className="w-20 justify-center"
                                                     >
                                                         {alert.severity.toUpperCase()}
@@ -366,9 +363,7 @@ export default function DashboardPage() {
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-xl">
                                 {selectedAlert.threatType}
-                                <Badge variant={
-                                    selectedAlert.severity === "critical" || selectedAlert.severity === "high" ? "destructive" : "secondary"
-                                }>
+                                <Badge variant={selectedAlert.severity as "critical" | "high" | "medium" | "low"}>
                                     {selectedAlert.severity.toUpperCase()}
                                 </Badge>
                             </DialogTitle>

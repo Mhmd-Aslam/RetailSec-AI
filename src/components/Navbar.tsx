@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar() {
     return (
@@ -46,6 +47,7 @@ export function Navbar() {
                                 {/* GitHub Icon could go here if needed, but keeping it minimal */}
                             </Link>
                         </Button>
+                        <ThemeToggle />
                     </nav>
                 </div>
             </div>

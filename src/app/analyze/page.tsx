@@ -274,10 +274,7 @@ export default function AnalyzePage() {
                                 >
                                     <CardContent className="p-4 flex items-center justify-between">
                                         <div className="flex items-center gap-4">
-                                            <Badge variant={
-                                                alert.severity === "critical" || alert.severity === "high" ? "destructive" :
-                                                    alert.severity === "medium" ? "secondary" : "outline"
-                                            } className="w-20 justify-center">
+                                            <Badge variant={alert.severity as "critical" | "high" | "medium" | "low"} className="w-20 justify-center">
                                                 {alert.severity.toUpperCase()}
                                             </Badge>
                                             <div>
@@ -315,9 +312,7 @@ export default function AnalyzePage() {
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2 text-xl">
                                     {selectedAlert.threatType}
-                                    <Badge variant={
-                                        selectedAlert.severity === "critical" || selectedAlert.severity === "high" ? "destructive" : "secondary"
-                                    }>
+                                    <Badge variant={selectedAlert.severity as "critical" | "high" | "medium" | "low"}>
                                         {selectedAlert.severity.toUpperCase()}
                                     </Badge>
                                 </DialogTitle>
