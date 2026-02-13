@@ -1,21 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import { z } from "zod";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { UploadCloud, CheckCircle, AlertTriangle, Loader2, FileJson, ShieldAlert, Activity, Database, Save, Play, FileText } from "lucide-react";
+import { UploadCloud, AlertTriangle, Loader2, ShieldAlert, Activity, Database, Save, Play, FileText } from "lucide-react";
 import { saveAlert, Alert } from "@/lib/storage";
 import { analyzeLogs, LogEntry } from "@/lib/threatEngine";
-import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import { downloadReport } from "@/lib/reportGenerator";
 import { generateMaliciousLogs } from "@/lib/attackSimulator";
 import { useDemoMode } from "@/lib/demoContext";
-// Actually my Dialog.tsx exports { Dialog, ... } but usage is often <Dialog open={...}><DialogContent>...
-// My Dialog.tsx above puts content directly in Dialog. Let's adjust usage to match my simple implementation or update component.
-// The simple implementation I wrote has `children` directly in `Dialog`.
-// Let's stick to the implementation I wrote: <Dialog open={...} onOpenChange={...}> <DialogHeader>... </Dialog>
+
+const LogEntrySchema = z.object({
+    timestamp: z.string(),
+    ip: z.string(),
+    username: z.string(),
+    action: z.enum(["LOGIN_ATTEMPT", "PAYMENT_ATTEMPT", "API_REQUEST", "POS_ACTIVITY"]),
+    status: z.enum(["SUCCESS", "FAIL"]),
+    amount: z.string().optional(),
+    userAgent: z.string(),
+    deviceType: z.enum(["mobile", "desktop", "pos-terminal"]),
+    location: z.string(),
+});
+
+const LogArraySchema = z.array(LogEntrySchema);
 
 export default function AnalyzePage() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -58,12 +69,7 @@ export default function AnalyzePage() {
         reader.onload = async (event) => {
             try {
                 const content = event.target?.result as string;
-                const logs = JSON.parse(content);
-
-                // Basic Validation
-                if (!Array.isArray(logs) || logs.length === 0 || !logs[0].timestamp || !logs[0].ip) {
-                    throw new Error("Invalid schema");
-                }
+                const logs = LogArraySchema.parse(JSON.parse(content));
 
                 setLogsCount(logs.length);
 

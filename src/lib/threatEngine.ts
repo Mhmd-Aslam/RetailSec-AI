@@ -175,7 +175,6 @@ export function analyzeLogs(logs: LogEntry[]): AnalysisResult {
   // Rule: POS_ACTIVITY outside normal hours (22:00 - 06:00) OR repeated fails (>5)
   // For simplicity, we'll scan all POS logs
   const posLogs = sortedLogs.filter(l => l.action === "POS_ACTIVITY");
-  const posByTerminal: Record<string, LogEntry[]> = {}; // Group by "deviceType" isn't enough, usually we need terminal ID. 
   // The log generator puts "pos-terminal" in deviceType but doesn't explicitly have a separate terminalId field other than maybe implied in username or IP.
   // We'll use IP as terminal identifier for this logic as per the generator script typically using specific IPs.
   // Oh wait, generator uses `deviceType: "pos-terminal"`.
