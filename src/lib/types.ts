@@ -7,4 +7,8 @@ export interface Alert {
   sourceIp: string;
   destinationIp: string;
   status: "new" | "investigating" | "resolved";
+  threatType?: string;
+  threatScore?: number;
+  evidence?: string[];
+  recommendedAction?: string;
 }

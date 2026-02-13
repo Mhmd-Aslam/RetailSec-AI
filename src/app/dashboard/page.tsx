@@ -8,21 +8,21 @@ import { AlertTriangle, CheckCircle, Clock, Shield, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/Button";
 
 export default function DashboardPage() {
-    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [securityAlerts, setSecurityAlerts] = useState<Alert[]>([]);
 
     useEffect(() => {
-        setAlerts(getAlerts());
+        setSecurityAlerts(getAlerts());
     }, []);
 
     const handleClear = () => {
         if (confirm("Are you sure you want to clear all alerts?")) {
             clearAlerts();
-            setAlerts([]);
+            setSecurityAlerts([]);
         }
     };
 
-    const highSeverityCount = alerts.filter((a) => a.severity === "high" || a.severity === "critical").length;
-    const newCount = alerts.filter((a) => a.status === "new").length;
+    const highSeverityCount = securityAlerts.filter((a) => a.severity === "high" || a.severity === "critical").length;
+    const newCount = securityAlerts.filter((a) => a.status === "new").length;
 
     return (
         <div className="container py-10 mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,7 +31,7 @@ export default function DashboardPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Security Dashboard</h1>
                     <p className="text-muted-foreground">Real-time overview of security posture.</p>
                 </div>
-                <Button variant="destructive" size="sm" onClick={handleClear} disabled={alerts.length === 0}>
+                <Button variant="destructive" size="sm" onClick={handleClear} disabled={securityAlerts.length === 0}>
                     <Trash2 className="mr-2 h-4 w-4" /> Clear History
                 </Button>
             </div>
@@ -44,7 +44,7 @@ export default function DashboardPage() {
                         <Shield className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{alerts.length}</div>
+                        <div className="text-2xl font-bold">{securityAlerts.length}</div>
                         <p className="text-xs text-muted-foreground">
                             +20.1% from last month
                         </p>
@@ -157,28 +157,29 @@ export default function DashboardPage() {
                                 <thead className="[&_tr]:border-b">
                                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Severity</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Type</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Description</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Score</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Source IP</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Destination IP</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="[&_tr:last-child]:border-0">
-                                    {alerts.length === 0 ? (
+                                    {securityAlerts.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="h-24 text-center">
+                                            <td colSpan={7} className="h-24 text-center">
                                                 No alerts found. Run an analysis to generate data.
                                             </td>
                                         </tr>
                                     ) : (
-                                        alerts.map((alert) => (
+                                        securityAlerts.map((alert) => (
                                             <tr key={alert.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                                 <td className="p-4 align-middle">
                                                     <Badge
                                                         variant={
                                                             alert.severity === "critical" || alert.severity === "high" ? "destructive" :
-                                                                alert.severity === "medium" ? "secondary" : "default" // "default" isn't quite right for low, maybe outline?
+                                                                alert.severity === "medium" ? "secondary" : "default"
                                                         }
                                                         className={
                                                             alert.severity === "low" ? "bg-blue-500 hover:bg-blue-600 border-transparent text-white" : ""
@@ -187,12 +188,24 @@ export default function DashboardPage() {
                                                         {alert.severity.toUpperCase()}
                                                     </Badge>
                                                 </td>
-                                                <td className="p-4 align-middle font-medium">{alert.description}</td>
+                                                <td className="p-4 align-middle font-medium">{alert.threatType || "Unknown"}</td>
+                                                <td className="p-4 align-middle">{alert.description}</td>
+                                                <td className="p-4 align-middle">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={
+                                                            (alert.threatScore || 0) > 80 ? "text-red-500 font-bold" :
+                                                                (alert.threatScore || 0) > 50 ? "text-yellow-500 font-bold" : ""
+                                                        }>
+                                                            {alert.threatScore || "N/A"}
+                                                        </span>
+                                                    </div>
+                                                </td>
                                                 <td className="p-4 align-middle">{alert.sourceIp}</td>
-                                                <td className="p-4 align-middle">{alert.destinationIp}</td>
                                                 <td className="p-4 align-middle">{new Date(alert.timestamp).toLocaleTimeString()}</td>
                                                 <td className="p-4 align-middle">
-                                                    <span className="capitalize">{alert.status}</span>
+                                                    <Button variant="ghost" size="sm" onClick={() => window.alert(`Details:\n${alert.evidence?.join("\n") || "No evidence"}\n\nAction:\n${alert.recommendedAction || "None"}`)}>
+                                                        View
+                                                    </Button>
                                                 </td>
                                             </tr>
                                         ))
