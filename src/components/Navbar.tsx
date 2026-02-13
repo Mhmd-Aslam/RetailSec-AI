@@ -1,19 +1,29 @@
-"use strict";
+"use client";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useDemoMode } from "@/lib/demoContext";
+import { Zap, ZapOff } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
 
 export function Navbar() {
+    const { isDemoMode, toggleDemoMode } = useDemoMode();
+
     return (
         <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mr-4 hidden md:flex">
                     <Link href="/" className="mr-6 flex items-center space-x-2">
-                        <ShieldCheck className="h-6 w-6" />
+                        <ShieldCheck className="h-6 w-6 text-primary" />
                         <span className="hidden font-bold sm:inline-block">
                             RetailSec AI
                         </span>
+                        {isDemoMode && (
+                            <Badge variant="outline" className="ml-2 border-amber-500 text-amber-500 bg-amber-500/10">
+                                DEMO MODE
+                            </Badge>
+                        )}
                     </Link>
                     <nav className="flex items-center space-x-6 text-sm font-medium">
                         <Link
@@ -46,6 +56,15 @@ export function Navbar() {
                                 <span className="sr-only">GitHub</span>
                                 {/* GitHub Icon could go here if needed, but keeping it minimal */}
                             </Link>
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleDemoMode}
+                            className={isDemoMode ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground"}
+                            title={isDemoMode ? "Disable Demo Mode" : "Enable Demo Mode"}
+                        >
+                            {isDemoMode ? <Zap className="h-4 w-4 fill-current" /> : <ZapOff className="h-4 w-4" />}
                         </Button>
                         <ThemeToggle />
                     </nav>

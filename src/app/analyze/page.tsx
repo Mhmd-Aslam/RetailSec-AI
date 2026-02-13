@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import { downloadReport } from "@/lib/reportGenerator";
 import { generateMaliciousLogs } from "@/lib/attackSimulator";
+import { useDemoMode } from "@/lib/demoContext";
 // Actually my Dialog.tsx exports { Dialog, ... } but usage is often <Dialog open={...}><DialogContent>...
 // My Dialog.tsx above puts content directly in Dialog. Let's adjust usage to match my simple implementation or update component.
 // The simple implementation I wrote has `children` directly in `Dialog`.
@@ -25,6 +26,7 @@ export default function AnalyzePage() {
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [isSaved, setIsSaved] = useState(false);
     const [currentLogs, setCurrentLogs] = useState<LogEntry[]>([]);
+    const { isDemoMode } = useDemoMode();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -76,7 +78,7 @@ export default function AnalyzePage() {
 
                     // Trigger AI enrichment
                     enrichAlertsWithAI(alerts);
-                }, 2000);
+                }, isDemoMode ? 500 : 2000);
 
             } catch (error) {
                 console.error("Failed to parse", error);

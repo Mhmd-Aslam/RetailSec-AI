@@ -35,6 +35,14 @@ export async function generateThreatExplanation(alert: Alert): Promise<AIAnalysi
          return getFallbackExplanation(alert);
     }
 
+    // Check for Demo Mode
+    if (typeof window !== "undefined") {
+        const isDemo = localStorage.getItem("retailsec_demo_mode") === "true";
+        if (isDemo) {
+            return getDemoExplanation(alert);
+        }
+    }
+
     try {
         const maskedAlert = maskData(alert);
         const prompt = `
@@ -92,5 +100,21 @@ function getFallbackExplanation(alert: Alert): AIAnalysisResult {
             "Review logs for surrounding activity 5 minutes before and after."
         ],
         confidence: alert.threatScore ? Math.min(alert.threatScore, 90) : 60
+    };
+}
+
+function getDemoExplanation(alert: Alert): AIAnalysisResult {
+    // Return a rich, pre-canned response for demos
+    return {
+        explanation: `[DEMO MODE] Based on the ${alert.threatType} signature, this activity corresponds to a known attack pattern. 
+        The source IP ${alert.sourceIp} has attempted similar actions across multiple delivery vectors in the last hour.
+        
+        This appears to be an automated script targeting the login endpoint. The high frequency of requests matches botnet signatures tracked in our threat intelligence feed.`,
+        mitigationSteps: [
+            "Block IP range 45.133.0.0/16 on WAF.",
+            "Reset credentials for targeted accounts.",
+            "Enable CAPTCHA on login forms."
+        ],
+        confidence: 98
     };
 }
