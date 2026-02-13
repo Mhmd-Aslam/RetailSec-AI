@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { UploadCloud, CheckCircle, AlertTriangle, Loader2, FileJson, ShieldAlert, Activity, Database, Save, Play } from "lucide-react";
+import { UploadCloud, CheckCircle, AlertTriangle, Loader2, FileJson, ShieldAlert, Activity, Database, Save, Play, FileText } from "lucide-react";
 import { saveAlert, Alert } from "@/lib/storage";
 import { analyzeLogs, LogEntry } from "@/lib/threatEngine";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"; // Note: I created a simplified Dialog, imports might need adjustment if using the file I just created.
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
+import { downloadReport } from "@/lib/reportGenerator";
 // Actually my Dialog.tsx exports { Dialog, ... } but usage is often <Dialog open={...}><DialogContent>...
 // My Dialog.tsx above puts content directly in Dialog. Let's adjust usage to match my simple implementation or update component.
 // The simple implementation I wrote has `children` directly in `Dialog`.
@@ -228,6 +229,9 @@ export default function AnalyzePage() {
                             <div className="flex gap-2">
                                 <Button variant="outline" onClick={() => { setComplete(false); setFileName(null); }}>
                                     Analyze New File
+                                </Button>
+                                <Button variant="outline" onClick={() => downloadReport(generatedAlerts)}>
+                                    <FileText className="mr-2 h-4 w-4" /> Report
                                 </Button>
                                 <Button onClick={handleSaveResults} disabled={isSaved}>
                                     <Save className="mr-2 h-4 w-4" />

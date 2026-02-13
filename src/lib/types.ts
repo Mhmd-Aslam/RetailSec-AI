@@ -13,4 +13,6 @@ export interface Alert {
   recommendedAction?: string; // AI generated mitigation steps can go here or appending to this
   aiExplanation?: string;
   aiConfidence?: number;
+  actionTaken?: boolean;
+  actionTimestamp?: string;
 }

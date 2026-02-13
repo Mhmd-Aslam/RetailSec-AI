@@ -3,12 +3,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Alert, getAlerts, clearAlerts } from "@/lib/storage";
-import { AlertTriangle, CheckCircle, Clock, Shield, Trash2, Download, Search, Filter } from "lucide-react";
+import { Alert, getAlerts, clearAlerts, saveAlert } from "@/lib/storage";
+import { AlertTriangle, CheckCircle, Clock, Shield, Trash2, Download, Search, Filter, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SeverityBarChart, ThreatTypePieChart } from "@/components/Charts";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"; // Using the standardized Dialog
-import { Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
+import { downloadReport } from "@/lib/reportGenerator";
+import { Loader2, FileText } from "lucide-react";
 
 export default function DashboardPage() {
     const [securityAlerts, setSecurityAlerts] = useState<Alert[]>([]);
@@ -97,12 +98,15 @@ export default function DashboardPage() {
         });
         const topIp = Object.entries(ipCounts).sort((a, b) => b[1] - a[1])[0];
 
+        const actionsTaken = securityAlerts.filter(a => a.actionTaken).length;
+
         return {
             total,
             critical,
             topThreat: topThreat ? `${topThreat[0]} (${topThreat[1]})` : "N/A",
             topIp: topIp ? topIp[0] : "N/A",
-            activeStatus: total > 0 && critical > 0 ? "Under Attack" : "Secure"
+            activeStatus: total > 0 && critical > 0 ? "Under Attack" : "Secure",
+            actionsTaken
         };
     }, [securityAlerts]);
 
@@ -127,6 +131,25 @@ export default function DashboardPage() {
             .slice(0, 5); // Top 5
     }, [securityAlerts]);
 
+    const handleBlockIp = (alert: Alert) => {
+        const updatedAlerts = securityAlerts.map(a => {
+            if (a.id === alert.id) {
+                return { ...a, actionTaken: true, actionTimestamp: new Date().toISOString() };
+            }
+            return a;
+        });
+
+        // Update local storage and state
+        // We need to update all alerts in storage
+        clearAlerts(); // simplistic update: clear and re-save all. In prod use better ID update.
+        updatedAlerts.forEach(saveAlert);
+
+        setSecurityAlerts(updatedAlerts);
+        // Close modal or update selected alert
+        setSelectedAlert(prev => prev ? { ...prev, actionTaken: true, actionTimestamp: new Date().toISOString() } : null);
+        window.alert(`Simulated Action: Blocked IP ${alert.sourceIp} on Firewall.`);
+    };
+
 
     return (
         <div className="container py-10 mx-auto px-4 sm:px-6 lg:px-8">
@@ -136,6 +159,9 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground">Real-time overview of security posture.</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => downloadReport(securityAlerts)} disabled={securityAlerts.length === 0}>
+                        <FileText className="mr-2 h-4 w-4" /> Report
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={securityAlerts.length === 0}>
                         <Download className="mr-2 h-4 w-4" /> JSON
                     </Button>
@@ -166,6 +192,24 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-red-500">{kpi.critical}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Actions Taken</CardTitle>
+                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-500">{kpi.actionsTaken}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Actions Taken</CardTitle>
+                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-500">{kpi.actionsTaken}</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -373,7 +417,18 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className="flex justify-between items-center w-full sm:justify-between">
+                            <div className="flex gap-2">
+                                {!selectedAlert.actionTaken ? (
+                                    <Button variant="destructive" onClick={() => handleBlockIp(selectedAlert)}>
+                                        <Shield className="mr-2 h-4 w-4" /> Simulate Block IP
+                                    </Button>
+                                ) : (
+                                    <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 px-3 py-1 flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4" /> Action Taken
+                                    </Badge>
+                                )}
+                            </div>
                             <Button variant="secondary" onClick={() => setSelectedAlert(null)}>Close</Button>
                         </DialogFooter>
                     </>
