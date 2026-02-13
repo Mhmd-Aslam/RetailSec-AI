@@ -3,38 +3,69 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { UploadCloud, CheckCircle, AlertTriangle, Loader2, FileJson } from "lucide-react";
+import { UploadCloud, CheckCircle, AlertTriangle, Loader2, FileJson, ShieldAlert, Activity, Database, Save, Play } from "lucide-react";
 import { saveAlert, Alert } from "@/lib/storage";
 import { analyzeLogs, LogEntry } from "@/lib/threatEngine";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog"; // Note: I created a simplified Dialog, imports might need adjustment if using the file I just created.
+// Actually my Dialog.tsx exports { Dialog, ... } but usage is often <Dialog open={...}><DialogContent>...
+// My Dialog.tsx above puts content directly in Dialog. Let's adjust usage to match my simple implementation or update component.
+// The simple implementation I wrote has `children` directly in `Dialog`.
+// Let's stick to the implementation I wrote: <Dialog open={...} onOpenChange={...}> <DialogHeader>... </Dialog>
 
 export default function AnalyzePage() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [complete, setComplete] = useState(false);
     const [generatedAlerts, setGeneratedAlerts] = useState<Alert[]>([]);
     const [fileName, setFileName] = useState<string | null>(null);
+    const [logsCount, setLogsCount] = useState(0);
+    const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+    const [isSaved, setIsSaved] = useState(false);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        processFile(file);
+    };
 
+    const loadSampleData = async () => {
+        try {
+            const response = await fetch("/sample_logs.json");
+            if (!response.ok) throw new Error("Failed to load sample data");
+            const blob = await response.blob();
+            const file = new File([blob], "sample_logs.json", { type: "application/json" });
+            processFile(file);
+        } catch (error) {
+            console.error(error);
+            alert("Could not load sample data. Ensure public/sample_logs.json exists.");
+        }
+    };
+
+    const processFile = (file: File) => {
         setFileName(file.name);
         setIsAnalyzing(true);
         setComplete(false);
+        setGeneratedAlerts([]);
+        setIsSaved(false);
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
-                const logs = JSON.parse(event.target?.result as string) as LogEntry[];
+                const content = event.target?.result as string;
+                const logs = JSON.parse(content);
 
-                // Simulate processing delay for effect
+                // Basic Validation
+                if (!Array.isArray(logs) || logs.length === 0 || !logs[0].timestamp || !logs[0].ip) {
+                    throw new Error("Invalid schema");
+                }
+
+                setLogsCount(logs.length);
+
+                // Simulate processing delay
+                // In a real app, we might chunk this or send to backend
                 setTimeout(() => {
-                    const { alerts } = analyzeLogs(logs);
-
-                    // Save all alerts
-                    alerts.forEach(saveAlert);
-
+                    const { alerts } = analyzeLogs(logs as LogEntry[]);
                     setGeneratedAlerts(alerts);
                     setIsAnalyzing(false);
                     setComplete(true);
@@ -44,8 +75,8 @@ export default function AnalyzePage() {
                 }, 2000);
 
             } catch (error) {
-                console.error("Failed to parse log file", error);
-                alert("Invalid JSON log file");
+                console.error("Failed to parse", error);
+                window.alert("Invalid JSON format or schema. Expected standard log entries.");
                 setIsAnalyzing(false);
                 setFileName(null);
             }
@@ -54,19 +85,15 @@ export default function AnalyzePage() {
     };
 
     const enrichAlertsWithAI = async (currentAlerts: Alert[]) => {
-        // Dynamic import to avoid server-side issues
         const { generateThreatExplanation } = await import("@/lib/groqClient");
-
-        // Process a few indicative alerts to save tokens/time
-        const criticalAlerts = currentAlerts
+        // Process top 5 high/critical alerts
+        const priorityAlerts = currentAlerts
             .filter(a => a.severity === "critical" || a.severity === "high")
-            .slice(0, 3);
+            .slice(0, 5);
 
-        for (const alert of criticalAlerts) {
+        for (const alert of priorityAlerts) {
             try {
                 const aiResult = await generateThreatExplanation(alert);
-
-                // Update state with new info
                 setGeneratedAlerts(prev => prev.map(a => {
                     if (a.id === alert.id) {
                         return {
@@ -84,29 +111,37 @@ export default function AnalyzePage() {
         }
     };
 
+    const handleSaveResults = () => {
+        generatedAlerts.forEach(saveAlert);
+        setIsSaved(true);
+        window.alert("Results saved to Dashboard!");
+    };
+
+    const stats = {
+        total: generatedAlerts.length,
+        critical: generatedAlerts.filter(a => a.severity === "critical" || a.severity === "high").length,
+        types: new Set(generatedAlerts.map(a => a.threatType)).size
+    };
+
     return (
         <div className="container py-10 mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Threat Analysis</h1>
-                    <p className="text-muted-foreground">
-                        Upload server logs (JSON) to identify potential security incidents.
-                    </p>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Threat Analysis</h1>
+                        <p className="text-muted-foreground">Log ingestion and automated threat detection engine.</p>
+                    </div>
+                    {!isAnalyzing && !complete && (
+                        <Button variant="outline" onClick={loadSampleData}>
+                            <Play className="mr-2 h-4 w-4" /> Load Sample Data
+                        </Button>
+                    )}
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    {/* Upload Area */}
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Log Ingestion</CardTitle>
-                            <CardDescription>
-                                Supported interaction: Upload <code>sample_logs.json</code>
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div
-                                className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center hover:bg-muted/50 transition-colors relative"
-                            >
+                {!complete && (
+                    <Card className="border-dashed border-2">
+                        <CardContent className="pt-6">
+                            <div className="flex flex-col items-center justify-center p-12 text-center relative min-h-[300px]">
                                 <input
                                     type="file"
                                     accept=".json"
@@ -114,110 +149,201 @@ export default function AnalyzePage() {
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                                     disabled={isAnalyzing}
                                 />
-
                                 {isAnalyzing ? (
-                                    <div className="flex flex-col items-center gap-4">
-                                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                                        <p className="text-lg font-medium">Analyzing {fileName}...</p>
-                                        <p className="text-sm text-muted-foreground">Running correlation engine...</p>
-                                    </div>
-                                ) : complete ? (
-                                    <div className="flex flex-col items-center gap-4 z-10 pointer-events-none">
-                                        <CheckCircle className="h-12 w-12 text-green-500" />
-                                        <p className="text-lg font-medium">Analysis Complete</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {generatedAlerts.length} threats identified in {fileName}.
-                                        </p>
-                                        <div className="flex gap-4 mt-4 pointer-events-auto">
-                                            <Button onClick={() => { setComplete(false); setFileName(null); }} variant="outline">
-                                                Analyze Another File
-                                            </Button>
-                                            <Button asChild>
-                                                <Link href="/dashboard">View Dashboard</Link>
-                                            </Button>
+                                    <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in">
+                                        <div className="relative">
+                                            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping"></div>
+                                            <Loader2 className="h-16 w-16 animate-spin text-primary relative z-10" />
                                         </div>
+                                        <h3 className="text-xl font-semibold">Analyzing {fileName}</h3>
+                                        <p className="text-muted-foreground max-w-xs mx-auto">
+                                            Running heuristic analysis on {logsCount} log entries...
+                                        </p>
                                     </div>
                                 ) : (
-                                    <div className="pointer-events-none">
-                                        <div className="rounded-full bg-primary/10 p-4 mb-4 inline-block">
-                                            <UploadCloud className="h-8 w-8 text-primary" />
+                                    <>
+                                        <div className="rounded-full bg-primary/10 p-6 mb-6">
+                                            <UploadCloud className="h-10 w-10 text-primary" />
                                         </div>
-                                        <p className="text-lg font-medium">Click to upload log file</p>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            or drag and drop .json file here
+                                        <h3 className="text-xl font-semibold mb-2">Upload Log File</h3>
+                                        <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                                            Drag and drop your JSON log file here, or click to browse.
+                                            <br />Supported format: JSON Array of LogEntry.
                                         </p>
-                                    </div>
+                                        <Button className="pointer-events-none">Select File</Button>
+                                    </>
                                 )}
                             </div>
                         </CardContent>
                     </Card>
-                </div>
+                )}
 
-                {/* Results Preview */}
-                {complete && generatedAlerts.length > 0 && (
-                    <div className="grid gap-4">
-                        <h2 className="text-xl font-semibold">Detected Threats</h2>
-                        {generatedAlerts.slice(0, 3).map((alert) => (
-                            <Card key={alert.id} className="border-l-4 border-l-red-500">
-                                <CardHeader>
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Badge variant="destructive">{alert.severity.toUpperCase()}</Badge>
-                                                <span className="text-sm text-muted-foreground">{new Date(alert.timestamp).toLocaleString()}</span>
-                                            </div>
-                                            <CardTitle className="text-lg">{alert.threatType}: {alert.description}</CardTitle>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-2xl font-bold">{alert.threatScore}</div>
-                                            <div className="text-xs text-muted-foreground">Risk Score</div>
-                                            {alert.aiConfidence && (
-                                                <div className="text-xs font-bold text-blue-500 mt-1">AI: {alert.aiConfidence}%</div>
-                                            )}
-                                        </div>
-                                    </div>
+                {complete && (
+                    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                        {/* Summary Cards */}
+                        <div className="grid gap-4 md:grid-cols-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Logs Processed</CardTitle>
+                                    <Database className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="space-y-2 text-sm text-muted-foreground">
-                                        <p><span className="font-semibold text-foreground">Source:</span> {alert.sourceIp}</p>
-
-                                        {alert.aiExplanation ? (
-                                            <div className="bg-muted/50 p-3 rounded border border-blue-200 dark:border-blue-900 my-2">
-                                                <div className="flex items-center gap-2 mb-1 text-blue-600 dark:text-blue-400 font-semibold">
-                                                    <span>🤖 AI Analysis</span>
-                                                </div>
-                                                <p className="whitespace-pre-wrap text-foreground text-xs leading-relaxed">{alert.aiExplanation}</p>
-                                            </div>
-                                        ) : (
-                                            (alert.severity === "high" || alert.severity === "critical") && (
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground italic my-2">
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                    Generating AI explanation...
-                                                </div>
-                                            )
-                                        )}
-
-                                        <div>
-                                            <span className="font-semibold text-foreground">Evidence:</span>
-                                            <ul className="list-disc pl-4 mt-1 text-xs">
-                                                {alert.evidence?.map((e, i) => (
-                                                    <li key={i}>{e}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-
-                                        <div className="mt-2 text-xs">
-                                            <span className="font-semibold text-foreground">Recommended Action:</span>
-                                            <pre className="whitespace-pre-wrap font-sans mt-1 bg-red-50 dark:bg-red-950/30 p-2 rounded border border-red-200 dark:border-red-900 text-red-800 dark:text-red-200">
-                                                {alert.recommendedAction}
-                                            </pre>
-                                        </div>
-                                    </div>
+                                    <div className="text-2xl font-bold">{logsCount}</div>
                                 </CardContent>
                             </Card>
-                        ))}
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Threats Detected</CardTitle>
+                                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{stats.total}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Critical/High</CardTitle>
+                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Threat Types</CardTitle>
+                                    <Activity className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{stats.types}</div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg border">
+                            <div className="text-sm text-muted-foreground">
+                                Analysis completed for <strong>{fileName}</strong>. Review alerts below.
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => { setComplete(false); setFileName(null); }}>
+                                    Analyze New File
+                                </Button>
+                                <Button onClick={handleSaveResults} disabled={isSaved}>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    {isSaved ? "Saved" : "Save Results"}
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Alerts List */}
+                        <div className="grid gap-4">
+                            {generatedAlerts.map((alert) => (
+                                <Card
+                                    key={alert.id}
+                                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                                    onClick={() => setSelectedAlert(alert)}
+                                >
+                                    <CardContent className="p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <Badge variant={
+                                                alert.severity === "critical" || alert.severity === "high" ? "destructive" :
+                                                    alert.severity === "medium" ? "secondary" : "outline"
+                                            } className="w-20 justify-center">
+                                                {alert.severity.toUpperCase()}
+                                            </Badge>
+                                            <div>
+                                                <div className="font-semibold flex items-center gap-2">
+                                                    {alert.threatType}
+                                                    {alert.aiConfidence && (
+                                                        <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                                                            AI
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">{alert.description}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-6 text-sm">
+                                            <div className="text-muted-foreground">
+                                                {new Date(alert.timestamp).toLocaleTimeString()}
+                                            </div>
+                                            <div className="w-24 text-right">
+                                                <span className="font-mono font-bold text-lg">{alert.threatScore}</span>
+                                                <span className="text-xs text-muted-foreground ml-1">Score</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
                     </div>
                 )}
+
+                {/* Detail Modal */}
+                <Dialog open={!!selectedAlert} onOpenChange={(open) => !open && setSelectedAlert(null)}>
+                    {selectedAlert && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-xl">
+                                    {selectedAlert.threatType}
+                                    <Badge variant={
+                                        selectedAlert.severity === "critical" || selectedAlert.severity === "high" ? "destructive" : "secondary"
+                                    }>
+                                        {selectedAlert.severity.toUpperCase()}
+                                    </Badge>
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Detected at {new Date(selectedAlert.timestamp).toLocaleString()} from {selectedAlert.sourceIp}
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                {/* AI Section */}
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                                        <span className="text-xl">🤖</span> AI Analysis
+                                        {selectedAlert.aiConfidence && <span className="text-xs font-normal text-muted-foreground">(Confidence: {selectedAlert.aiConfidence}%)</span>}
+                                    </h4>
+                                    {selectedAlert.aiExplanation ? (
+                                        <div className="bg-muted p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
+                                            {selectedAlert.aiExplanation}
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-muted-foreground italic flex items-center gap-2">
+                                            {(selectedAlert.severity === 'high' || selectedAlert.severity === 'critical') ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                                            {(selectedAlert.severity === 'high' || selectedAlert.severity === 'critical') ? "Analyzing with Groq Llama-3..." : "AI analysis skipped for low severity."}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Mitigation */}
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-semibold">Recommended Actions</h4>
+                                    <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900 rounded-lg p-3 text-sm">
+                                        <pre className="whitespace-pre-wrap font-sans text-red-800 dark:text-red-200">
+                                            {selectedAlert.recommendedAction || "No specific actions recommended."}
+                                        </pre>
+                                    </div>
+                                </div>
+
+                                {/* Evidence */}
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-semibold">Technical Evidence</h4>
+                                    <ul className="list-disc pl-4 text-sm text-muted-foreground space-y-1">
+                                        {selectedAlert.evidence?.map((e, i) => (
+                                            <li key={i}>{e}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button variant="secondary" onClick={() => setSelectedAlert(null)}>Close</Button>
+                            </DialogFooter>
+                        </>
+                    )}
+                </Dialog>
             </div>
         </div>
     );
