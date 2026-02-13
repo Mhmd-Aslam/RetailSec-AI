@@ -45,7 +45,7 @@ export function ThreatTypePieChart({ data }: { data: { name: string; value: numb
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }: { name?: string | number; percent?: number }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                 >
                     {data.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import { downloadReport } from "@/lib/reportGenerator";
+import { generateMaliciousLogs } from "@/lib/attackSimulator";
 // Actually my Dialog.tsx exports { Dialog, ... } but usage is often <Dialog open={...}><DialogContent>...
 // My Dialog.tsx above puts content directly in Dialog. Let's adjust usage to match my simple implementation or update component.
 // The simple implementation I wrote has `children` directly in `Dialog`.
@@ -23,6 +24,7 @@ export default function AnalyzePage() {
     const [logsCount, setLogsCount] = useState(0);
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [isSaved, setIsSaved] = useState(false);
+    const [currentLogs, setCurrentLogs] = useState<LogEntry[]>([]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -66,6 +68,7 @@ export default function AnalyzePage() {
                 // Simulate processing delay
                 // In a real app, we might chunk this or send to backend
                 setTimeout(() => {
+                    setCurrentLogs(logs as LogEntry[]);
                     const { alerts } = analyzeLogs(logs as LogEntry[]);
                     setGeneratedAlerts(alerts);
                     setIsAnalyzing(false);
@@ -116,6 +119,24 @@ export default function AnalyzePage() {
         generatedAlerts.forEach(saveAlert);
         setIsSaved(true);
         window.alert("Results saved to Dashboard!");
+    };
+
+    const handleSimulateAttack = () => {
+        if (currentLogs.length === 0) return;
+
+        const lastLogTime = currentLogs[currentLogs.length - 1].timestamp;
+        const maliciousLogs = generateMaliciousLogs(lastLogTime);
+        const newLogs = [...currentLogs, ...maliciousLogs];
+
+        setCurrentLogs(newLogs);
+        setLogsCount(newLogs.length);
+
+        // Re-analyze
+        const { alerts } = analyzeLogs(newLogs);
+        setGeneratedAlerts(alerts);
+        enrichAlertsWithAI(alerts);
+
+        window.alert(`Simulated Attack Injected! Added ${maliciousLogs.length} malicious logs.`);
     };
 
     const stats = {
@@ -232,6 +253,9 @@ export default function AnalyzePage() {
                                 </Button>
                                 <Button variant="outline" onClick={() => downloadReport(generatedAlerts)}>
                                     <FileText className="mr-2 h-4 w-4" /> Report
+                                </Button>
+                                <Button variant="destructive" onClick={handleSimulateAttack}>
+                                    <ShieldAlert className="mr-2 h-4 w-4" /> Simulate Attack
                                 </Button>
                                 <Button onClick={handleSaveResults} disabled={isSaved}>
                                     <Save className="mr-2 h-4 w-4" />
