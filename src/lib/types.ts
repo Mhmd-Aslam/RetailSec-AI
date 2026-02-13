@@ -1,0 +1,10 @@
+export interface Alert {
+  id: string;
+  timestamp: string;
+  severity: "low" | "medium" | "high" | "critical";
+  sourceIcon: string; // just a string identifier for now
+  description: string;
+  sourceIp: string;
+  destinationIp: string;
+  status: "new" | "investigating" | "resolved";
+}
