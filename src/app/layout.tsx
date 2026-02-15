@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={cn(inter.variable, jetbrainsMono.variable, "min-h-screen bg-background font-sans antialiased")}>
         <ThemeProvider
           attribute="class"
