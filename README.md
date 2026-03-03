@@ -79,10 +79,9 @@ graph LR
 
 ## 📸 Screenshots
 
-| Dashboard | Analyze Page |
+| Security Dashboard | Threat Analysis |
 |:---:|:---:|
-| ![Dashboard Placeholder](https://placehold.co/600x400/png?text=Dashboard+UI) | ![Analyze Placeholder](https://placehold.co/600x400/png?text=Analyze+Page) |
-*Placeholders for actual application screenshots.*
+| ![Security Dashboard](docs/ss1.png) | ![Threat Analysis](docs/ss2.png) |
 
 ---
 
