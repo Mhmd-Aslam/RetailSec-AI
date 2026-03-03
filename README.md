@@ -46,26 +46,6 @@ The retail industry faces a unique and escalating threat landscape. Traditional 
 
 ---
 
-## 🏗️ Architecture
-
-RetailSec AI operates on a 5-agent pipeline architecture:
-
-```mermaid
-graph LR
-    A[📂 Log Ingestion] -->|Normailzed Logs| B[🔍 Threat Classification]
-    B -->|Known Signatures| C[📊 Anomaly Detection]
-    C -->|Zero-Day Outliers| D[🧠 Response Agent]
-    D -->|Mitigation Plan| E[📝 Reporting Agent]
-    
-    style A fill:#dbeafe,stroke:#2563eb,stroke-width:2px
-    style B fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px
-    style C fill:#f3e8ff,stroke:#9333ea,stroke-width:2px
-    style D fill:#fef3c7,stroke:#d97706,stroke-width:2px
-    style E fill:#d1fae5,stroke:#059669,stroke-width:2px
-```
-
----
-
 ## 🛠️ Tech Stack
 
 - **Framework**: [Next.js 14](https://nextjs.org/) (React, TypeScript)
