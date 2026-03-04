@@ -6,6 +6,7 @@
 
 **RetailSec AI** is a next-generation **Security Operations Center (SOC)** dashboard designed specifically for the retail sector. It leverages specialized AI agents to detect, analyze, and remediate cyber threats—ranging from credential stuffing to Point-of-Sale (POS) malware—in real-time.
 
+[Live Demo](https://retailsec-ai.vercel.app/)
 ---
 
 ## 🚀 Overview
@@ -24,11 +25,12 @@ The retail industry faces a unique and escalating threat landscape. Traditional 
 
 - **Autonomous Multi-Agent Core**: Visualizes the pipeline from log ingestion to reporting.
 - **Real-Time Threat Detection**: Instant identification of malicious patterns.
-- **AI-Powered Analysis**: Integrated **Groq (Llama-3)** client explains alerts in plain English and recommends mitigation steps.
+- **Hybrid AI-Powered Analysis**: Integrated **Groq (Llama-3.3)** client explains alerts. Features auto-analysis for priority threats and manual "on-demand" analysis for others to optimize API usage.
 - **Interactive Dashboard**: 
-  - dynamic charts (Recharts) for threat distribution.
+  - Dynamic charts (Recharts) for threat distribution.
   - Live KPI metrics (Critical Threats, Actions Taken).
-  - Advanced filtering and search.
+  - Advanced sorting (Severity-first) and optimized filtering.
+- **Full Mobile Responsiveness**: Optimized experience across mobile, tablet, and desktop with custom hamburger navigation and card-based log views.
 - **Attack Simulator**: Built-in tool to inject malicious logs (Credential Stuffing, Payment Fraud) to validate detection rules.
 - **Simulated Response**: "Block IP" capability with visual feedback and persistence.
 - **Incident Reporting**: One-click generation of text-based executive summaries.
@@ -48,12 +50,12 @@ The retail industry faces a unique and escalating threat landscape. Traditional 
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [Next.js 14](https://nextjs.org/) (React, TypeScript)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + `clsx`
+- **Framework**: [Next.js 14](https://nextjs.org/) (App Router, TypeScript)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + Custom Toast Component
 - **Visualization**: [Recharts](https://recharts.org/)
 - **Icons**: [Lucide React](https://lucide.dev/)
-- **AI Engine**: [Groq SDK](https://groq.com/) (Llama-3-70b)
-- **State Management**: React Hooks + LocalStorage
+- **AI Engine**: [Groq API](https://groq.com/) (**Llama-3.3-70b-versatile**)
+- **State Management**: React Hooks + LocalStorage Context
 
 ---
 
@@ -95,9 +97,9 @@ The retail industry faces a unique and escalating threat landscape. Traditional 
 3.  **Configure Environment**:
     Create a `.env.local` file in the root directory:
     ```env
-    NEXT_PUBLIC_GROQ_API_KEY=gsk_your_groq_api_key_here
+    GROQ_API_KEY=gsk_your_groq_api_key_here
     ```
-    > *Note: If no API key is provided, the app uses a fallback mock AI response.*
+    > *Note: For security, the API key is now strictly server-side. If no API key is provided, the app uses a fallback mock AI response.*
 
 4.  **Run Locally**:
     ```bash
