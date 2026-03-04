@@ -1,5 +1,8 @@
 import { Alert } from "./types";
 
+/**
+ * Represents a normalized log entry within the security pipeline.
+ */
 export interface LogEntry {
   timestamp: string;
   ip: string;
@@ -12,6 +15,9 @@ export interface LogEntry {
   location: string;
 }
 
+/**
+ * Summary statistics for a single analysis pass.
+ */
 export interface AnalysisSummary {
   totalLogs: number;
   totalAlerts: number;
@@ -19,24 +25,39 @@ export interface AnalysisSummary {
   alertsBySeverity: Record<string, number>;
 }
 
+/**
+ * Result of the log analysis pass.
+ */
 export interface AnalysisResult {
   alerts: Alert[];
   summary: AnalysisSummary;
 }
 
+/**
+ * Analyzes a stream of logs using heuristic-based detection rules.
+ * 
+ * Logic includes pattern matching for:
+ * - Credential Stuffing (High-frequency login failures)
+ * - Bot Traffic (API volume anomalies)
+ * - Payment Fraud (Velocity checks on transactions)
+ * - POS Malware (Anomalous terminal activity)
+ * 
+ * @param logs Array of raw LogEntry objects.
+ * @returns Object containing generated alerts and execution summary.
+ */
 export function analyzeLogs(logs: LogEntry[]): AnalysisResult {
   const alerts: Alert[] = [];
   const sortedLogs = [...logs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-  // Helper patterns
+  // Index logs by IP for optimized lookup during detection
   const logsByIp: Record<string, LogEntry[]> = {};
   sortedLogs.forEach(log => {
     if (!logsByIp[log.ip]) logsByIp[log.ip] = [];
     logsByIp[log.ip].push(log);
   });
 
-  // 1. Credential Stuffing Detection
-  // Rule: Same IP, >10 failed logins within 2 minutes
+  // --- Credential Stuffing Detection ---
+  // Threshold: >10 failed logins from same IP within a 120s sliding window
   Object.entries(logsByIp).forEach(([ip, userLogs]) => {
     const failedLogins = userLogs.filter(l => l.action === "LOGIN_ATTEMPT" && l.status === "FAIL");
     
@@ -55,8 +76,7 @@ export function analyzeLogs(logs: LogEntry[]): AnalysisResult {
         }
 
         if (count > 10) {
-            // Check if we already have an alert for this IP and window to avoid duplicates
-            // For simplicity, we'll just generate one alert per "cluster" and skip the index
+            // Deduplicate: Create one alert per detection cluster
             const uniqueUsers = Array.from(affectedUsers).slice(0, 3).join(", ") + (affectedUsers.size > 3 ? "..." : "");
 
             alerts.push({
@@ -83,8 +103,8 @@ export function analyzeLogs(logs: LogEntry[]): AnalysisResult {
     }
   });
 
-  // 2. Bot Traffic Detection
-  // Rule: Same IP, >100 API_REQUESTs within 5 minutes
+  // --- Bot Traffic Detection ---
+  // Threshold: >100 API_REQUESTs from same IP within a 300s sliding window
   Object.entries(logsByIp).forEach(([ip, userLogs]) => {
       const apiRequests = userLogs.filter(l => l.action === "API_REQUEST");
       
@@ -124,12 +144,11 @@ export function analyzeLogs(logs: LogEntry[]): AnalysisResult {
       }
   });
 
-  // 3. Payment Fraud Detection
-  // Rule: >5 failed PAYMENT_ATTEMPTs then 1 SUCCESS within 10 minutes, amount > 5000 (Success amount)
+  // --- Payment Fraud Detection ---
+  // Threshold: >5 failures followed by a SUCCESS transaction within 10 minutes
   Object.entries(logsByIp).forEach(([ip, userLogs]) => {
     const payments = userLogs.filter(l => l.action === "PAYMENT_ATTEMPT");
     
-    // We iterate through payments to find the pattern
     for (let i = 0; i < payments.length; i++) {
         if (payments[i].status === "SUCCESS") {
             const successTime = new Date(payments[i].timestamp).getTime();
@@ -171,15 +190,12 @@ export function analyzeLogs(logs: LogEntry[]): AnalysisResult {
     }
   });
 
-  // 4. POS Malware Suspicion
-  // Rule: POS_ACTIVITY outside normal hours (22:00 - 06:00) OR repeated fails (>5)
-  // For simplicity, we'll scan all POS logs
+  // --- POS Malware Suspicion ---
+  // Heuristics: 
+  // 1. After-hours activity (22:00 - 06:00)
+  // 2. Repeated failures (>5 consecutive)
   const posLogs = sortedLogs.filter(l => l.action === "POS_ACTIVITY");
-  // The log generator puts "pos-terminal" in deviceType but doesn't explicitly have a separate terminalId field other than maybe implied in username or IP.
-  // We'll use IP as terminal identifier for this logic as per the generator script typically using specific IPs.
-  // Oh wait, generator uses `deviceType: "pos-terminal"`.
   
-  // Let's look for "Unusual failures" pattern on POS
   const posIPs = new Set(posLogs.map(l => l.ip));
   posIPs.forEach(ip => {
       const logs = logsByIp[ip].filter(l => l.action === "POS_ACTIVITY");

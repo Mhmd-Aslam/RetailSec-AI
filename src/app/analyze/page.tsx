@@ -38,6 +38,7 @@ export default function AnalyzePage() {
     const [isSaved, setIsSaved] = useState(false);
     const [currentLogs, setCurrentLogs] = useState<LogEntry[]>([]);
     const [isEnriching, setIsEnriching] = useState(false);
+    const [aiStatus, setAiStatus] = useState<"live" | "demo" | "fallback_no_key" | "fallback_error" | null>(null);
     const { isDemoMode } = useDemoMode();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +47,9 @@ export default function AnalyzePage() {
         processFile(file);
     };
 
+    /**
+     * Ingests and processes sample logs from the public directory.
+     */
     const loadSampleData = async () => {
         try {
             const response = await fetch("/sample_logs.json");
@@ -59,6 +63,9 @@ export default function AnalyzePage() {
         }
     };
 
+    /**
+     * Parses the uploaded JSON file, validates schema, and triggers the detection engine.
+     */
     const processFile = (file: File) => {
         setFileName(file.name);
         setIsAnalyzing(true);
@@ -74,8 +81,7 @@ export default function AnalyzePage() {
 
                 setLogsCount(logs.length);
 
-                // Simulate processing delay
-                // In a real app, we might chunk this or send to backend
+                // Simulation delay to reflect realistic processing time for large log sets
                 setTimeout(() => {
                     setCurrentLogs(logs as LogEntry[]);
                     const { alerts } = analyzeLogs(logs as LogEntry[]);
@@ -83,7 +89,7 @@ export default function AnalyzePage() {
                     setIsAnalyzing(false);
                     setComplete(true);
 
-                    // Trigger AI enrichment
+                    // Initiate background AI analysis for high-priority detections
                     enrichAlertsWithAI(alerts);
                 }, isDemoMode ? 500 : 2000);
 
@@ -109,6 +115,8 @@ export default function AnalyzePage() {
         for (const alert of priorityAlerts) {
             try {
                 const aiResult = await generateThreatExplanation(alert);
+                if (!aiStatus) setAiStatus(aiResult.status);
+
                 setGeneratedAlerts(prev => prev.map(a => {
                     if (a.id === alert.id) {
                         return {
@@ -133,6 +141,9 @@ export default function AnalyzePage() {
         window.alert("Results saved to Dashboard!");
     };
 
+    /**
+     * Injects synthetic malicious activity into the current session to validate detection rules.
+     */
     const handleSimulateAttack = () => {
         if (currentLogs.length === 0) return;
 
@@ -143,7 +154,7 @@ export default function AnalyzePage() {
         setCurrentLogs(newLogs);
         setLogsCount(newLogs.length);
 
-        // Re-analyze
+        // Re-run analysis on the expanded log set
         const { alerts } = analyzeLogs(newLogs);
         setGeneratedAlerts(alerts);
         enrichAlertsWithAI(alerts);
@@ -214,7 +225,6 @@ export default function AnalyzePage() {
 
                 {complete && (
                     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                        {/* Summary Cards */}
                         <div className="grid gap-4 md:grid-cols-4">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -254,7 +264,27 @@ export default function AnalyzePage() {
                             </Card>
                         </div>
 
-                        {/* Actions */}
+                        {/* AI Status Banner */}
+                        {aiStatus && aiStatus !== "live" && (
+                            <div className={`p-4 rounded-lg border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${aiStatus === "demo"
+                                    ? "bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-900 dark:text-blue-300"
+                                    : "bg-amber-50 border-amber-100 text-amber-800 dark:bg-amber-900/20 dark:border-amber-900 dark:text-amber-300"
+                                }`}>
+                                <Brain className="h-5 w-5" />
+                                <div className="text-sm">
+                                    {aiStatus === "demo" && (
+                                        <><strong>Demo Mode Active:</strong> Using pre-canned high-fidelity responses for presentation stability.</>
+                                    )}
+                                    {aiStatus === "fallback_no_key" && (
+                                        <><strong>AI Key Not Found:</strong> Using local rule-based engine. Add <code>GROQ_API_KEY</code> to <code>.env.local</code> for real-time AI analysis.</>
+                                    )}
+                                    {aiStatus === "fallback_error" && (
+                                        <><strong>AI Service Degraded:</strong> Rate limit reached or connection issue. Temporarily using local heuristics.</>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg border">
                             <div className="text-sm text-muted-foreground">
                                 Analysis completed for <strong>{fileName}</strong>. Review alerts below.
@@ -282,7 +312,6 @@ export default function AnalyzePage() {
                             </div>
                         </div>
 
-                        {/* Alerts List */}
                         <div className="grid gap-4">
                             {generatedAlerts.map((alert) => (
                                 <Card

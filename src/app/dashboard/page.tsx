@@ -64,14 +64,13 @@ export default function DashboardPage() {
         }
     };
 
-    // Filter Logic
     const filteredAlerts = useMemo(() => {
         return securityAlerts.filter(alert => {
             const matchesSearch =
                 alert.sourceIp.includes(searchTerm) ||
                 alert.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (alert.threatType && alert.threatType.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (alert.aiExplanation && alert.aiExplanation.toLowerCase().includes(searchTerm.toLowerCase())); // Search inside AI explanation too!
+                (alert.aiExplanation && alert.aiExplanation.toLowerCase().includes(searchTerm.toLowerCase()));
 
             const matchesSeverity = severityFilter === "all" || alert.severity === severityFilter;
 
@@ -79,12 +78,13 @@ export default function DashboardPage() {
         });
     }, [securityAlerts, searchTerm, severityFilter]);
 
-    // KPI Calculations
+    /**
+     * Aggregates alert data into Key Performance Indicators (KPIs).
+     */
     const kpi = useMemo(() => {
         const total = securityAlerts.length;
         const critical = securityAlerts.filter(a => a.severity === "critical" || a.severity === "high").length;
 
-        // Top Threat Type
         const typeCounts: Record<string, number> = {};
         securityAlerts.forEach(a => {
             const t = a.threatType || "Unknown";
@@ -92,7 +92,6 @@ export default function DashboardPage() {
         });
         const topThreat = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
 
-        // Top Attacker IP
         const ipCounts: Record<string, number> = {};
         securityAlerts.forEach(a => {
             ipCounts[a.sourceIp] = (ipCounts[a.sourceIp] || 0) + 1;
@@ -111,7 +110,9 @@ export default function DashboardPage() {
         };
     }, [securityAlerts]);
 
-    // Chart Data Preparation
+    /**
+     * Normalizes alert data for visualization in charts.
+     */
     const severityData = useMemo(() => {
         const counts = { critical: 0, high: 0, medium: 0, low: 0 };
         securityAlerts.forEach(a => {
@@ -129,9 +130,12 @@ export default function DashboardPage() {
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
-            .slice(0, 5); // Top 5
+            .slice(0, 5); // Extract top 5 threats for visual clarity
     }, [securityAlerts]);
 
+    /**
+     * Executes a simulated IP block by updating alert status in local persistence.
+     */
     const handleBlockIp = (alert: Alert) => {
         const updatedAlerts = securityAlerts.map(a => {
             if (a.id === alert.id) {
@@ -140,13 +144,10 @@ export default function DashboardPage() {
             return a;
         });
 
-        // Update local storage and state
-        // We need to update all alerts in storage
-        clearAlerts(); // simplistic update: clear and re-save all. In prod use better ID update.
+        clearAlerts();
         updatedAlerts.forEach(saveAlert);
 
         setSecurityAlerts(updatedAlerts);
-        // Close modal or update selected alert
         setSelectedAlert(prev => prev ? { ...prev, actionTaken: true, actionTimestamp: new Date().toISOString() } : null);
         window.alert(`Simulated Action: Blocked IP ${alert.sourceIp} on Firewall.`);
     };
