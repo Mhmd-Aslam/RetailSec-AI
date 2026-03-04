@@ -60,8 +60,7 @@ The retail industry faces a unique and escalating threat landscape. Traditional 
 ## 📸 Screenshots
 
 | Security Dashboard | Threat Analysis | Analysis Result |
-|:---:|:---:|
-|:---:|
+|:---:|:---:|:---:|
 | ![Security Dashboard](public/images/ss1.png) | ![Threat Analysis](public/images/ss2.png) | ![Analysis Result](public/images/ss3.png) |
 
 
