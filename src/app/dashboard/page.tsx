@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Alert, getAlerts, clearAlerts, saveAlert } from "@/lib/storage";
-import { AlertTriangle, CheckCircle, Clock, Shield, Trash2, Download, Search, Filter, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, Shield, Trash2, Download, Search, Filter, ShieldCheck, Activity } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SeverityBarChart, ThreatTypePieChart } from "@/components/Charts";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
@@ -19,6 +19,8 @@ export default function DashboardPage() {
     const [severityFilter, setSeverityFilter] = useState<string>("all");
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+    const [sortBy, setSortBy] = useState<"severity" | "threatType" | "threatScore" | "timestamp">("severity");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const { toast } = useToast();
 
     useEffect(() => {
@@ -72,18 +74,36 @@ export default function DashboardPage() {
     };
 
     const filteredAlerts = useMemo(() => {
-        return securityAlerts.filter(alert => {
-            const matchesSearch =
-                alert.sourceIp.includes(searchTerm) ||
-                alert.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (alert.threatType && alert.threatType.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (alert.aiExplanation && alert.aiExplanation.toLowerCase().includes(searchTerm.toLowerCase()));
+        const severityRank: Record<string, number> = { "critical": 4, "high": 3, "medium": 2, "low": 1 };
 
-            const matchesSeverity = severityFilter === "all" || alert.severity === severityFilter;
+        return securityAlerts
+            .filter(alert => {
+                const matchesSearch =
+                    alert.sourceIp.includes(searchTerm) ||
+                    alert.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (alert.threatType && alert.threatType.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (alert.aiExplanation && alert.aiExplanation.toLowerCase().includes(searchTerm.toLowerCase()));
 
-            return matchesSearch && matchesSeverity;
-        });
-    }, [securityAlerts, searchTerm, severityFilter]);
+                const matchesSeverity = severityFilter === "all" || alert.severity === severityFilter;
+
+                return matchesSearch && matchesSeverity;
+            })
+            .sort((a, b) => {
+                let comparison = 0;
+
+                if (sortBy === "severity") {
+                    comparison = (severityRank[a.severity] || 0) - (severityRank[b.severity] || 0);
+                } else if (sortBy === "threatScore") {
+                    comparison = (a.threatScore || 0) - (b.threatScore || 0);
+                } else if (sortBy === "timestamp") {
+                    comparison = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+                } else if (sortBy === "threatType") {
+                    comparison = (a.threatType || "").localeCompare(b.threatType || "");
+                }
+
+                return sortOrder === "asc" ? comparison : -comparison;
+            });
+    }, [securityAlerts, searchTerm, severityFilter, sortBy, sortOrder]);
 
     /**
      * Aggregates alert data into Key Performance Indicators (KPIs).
@@ -162,6 +182,20 @@ export default function DashboardPage() {
             message: `Simulated Action: Blocked IP ${alert.sourceIp} on Firewall.`,
             type: "success"
         });
+    };
+
+    const handleSort = (key: typeof sortBy) => {
+        if (sortBy === key) {
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+        } else {
+            setSortBy(key);
+            setSortOrder("desc"); // Default to desc when changing keys
+        }
+    };
+
+    const SortIcon = ({ column }: { column: typeof sortBy }) => {
+        if (sortBy !== column) return <span className="ml-1 opacity-20">↕</span>;
+        return sortOrder === "asc" ? <span className="ml-1 text-primary">↑</span> : <span className="ml-1 text-primary">↓</span>;
     };
 
 
@@ -298,10 +332,10 @@ export default function DashboardPage() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 group">
+                    <Filter className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     <select
-                        className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="h-9 w-[160px] rounded-md border border-input bg-card px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:border-primary/50 transition-all cursor-pointer font-medium"
                         value={severityFilter}
                         onChange={(e) => setSeverityFilter(e.target.value)}
                     >
@@ -312,7 +346,28 @@ export default function DashboardPage() {
                         <option value="low">Low</option>
                     </select>
                 </div>
-                <div className="ml-auto text-sm text-muted-foreground">
+                <div className="flex md:hidden items-center gap-2 group w-full">
+                    <Activity className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <select
+                        className="h-9 flex-1 rounded-md border border-input bg-card px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:border-primary/50 transition-all cursor-pointer font-medium"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                    >
+                        <option value="severity">Sort: Severity</option>
+                        <option value="threatScore">Sort: Score</option>
+                        <option value="timestamp">Sort: Time</option>
+                        <option value="threatType">Sort: Type</option>
+                    </select>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 px-2"
+                        onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    >
+                        {sortOrder === "asc" ? "↑" : "↓"}
+                    </Button>
+                </div>
+                <div className="ml-auto text-sm text-muted-foreground hidden md:block">
                     Showing {filteredAlerts.length} of {securityAlerts.length} alerts
                 </div>
             </div>
@@ -329,12 +384,32 @@ export default function DashboardPage() {
                             <table className="w-full caption-bottom text-sm text-left">
                                 <thead className="[&_tr]:border-b sticky top-0 bg-background z-10">
                                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Severity</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Type</th>
+                                        <th
+                                            className="h-12 px-4 align-middle font-medium text-muted-foreground cursor-pointer hover:text-primary transition-colors select-none"
+                                            onClick={() => handleSort("severity")}
+                                        >
+                                            Severity <SortIcon column="severity" />
+                                        </th>
+                                        <th
+                                            className="h-12 px-4 align-middle font-medium text-muted-foreground cursor-pointer hover:text-primary transition-colors select-none"
+                                            onClick={() => handleSort("threatType")}
+                                        >
+                                            Type <SortIcon column="threatType" />
+                                        </th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Description</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Score</th>
+                                        <th
+                                            className="h-12 px-4 align-middle font-medium text-muted-foreground cursor-pointer hover:text-primary transition-colors select-none"
+                                            onClick={() => handleSort("threatScore")}
+                                        >
+                                            Score <SortIcon column="threatScore" />
+                                        </th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Source IP</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
+                                        <th
+                                            className="h-12 px-4 align-middle font-medium text-muted-foreground cursor-pointer hover:text-primary transition-colors select-none"
+                                            onClick={() => handleSort("timestamp")}
+                                        >
+                                            Time <SortIcon column="timestamp" />
+                                        </th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Action</th>
                                     </tr>
                                 </thead>
