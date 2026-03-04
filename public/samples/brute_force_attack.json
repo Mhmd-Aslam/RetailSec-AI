@@ -1,0 +1,252 @@
+[
+  {
+    "timestamp": "2026-03-04T07:20:45.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_0",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:43.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_1",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:41.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_2",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:39.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_3",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:37.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_4",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:35.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_5",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:33.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_6",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:31.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_7",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:29.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_8",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:27.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_9",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:25.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_10",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:23.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_11",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:21.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_12",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:19.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_13",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:17.871Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_14",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:15.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_15",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:13.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_16",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:11.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_17",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:09.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_18",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:07.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_19",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:05.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_20",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:03.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_21",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:20:01.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_22",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:19:59.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_23",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  },
+  {
+    "timestamp": "2026-03-04T07:19:57.872Z",
+    "ip": "45.133.1.55",
+    "username": "admin_root_24",
+    "action": "LOGIN_ATTEMPT",
+    "status": "FAIL",
+    "userAgent": "Mozilla/5.0 (Hydra/1.1)",
+    "deviceType": "desktop",
+    "location": "Unknown Proxy"
+  }
+]

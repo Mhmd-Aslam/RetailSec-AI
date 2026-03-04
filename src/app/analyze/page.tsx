@@ -5,7 +5,7 @@ import { z } from "zod";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { UploadCloud, AlertTriangle, Loader2, ShieldAlert, Activity, Database, Save, Play, FileText } from "lucide-react";
+import { UploadCloud, AlertTriangle, Loader2, ShieldAlert, Activity, Database, Save, Play, FileText, Brain } from "lucide-react";
 import { saveAlert, Alert } from "@/lib/storage";
 import { analyzeLogs, LogEntry } from "@/lib/threatEngine";
 import { Badge } from "@/components/ui/Badge";
@@ -37,6 +37,7 @@ export default function AnalyzePage() {
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [isSaved, setIsSaved] = useState(false);
     const [currentLogs, setCurrentLogs] = useState<LogEntry[]>([]);
+    const [isEnriching, setIsEnriching] = useState(false);
     const { isDemoMode } = useDemoMode();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,6 +104,8 @@ export default function AnalyzePage() {
             .filter(a => a.severity === "critical" || a.severity === "high")
             .slice(0, 5);
 
+        if (priorityAlerts.length > 0) setIsEnriching(true);
+
         for (const alert of priorityAlerts) {
             try {
                 const aiResult = await generateThreatExplanation(alert);
@@ -121,6 +124,7 @@ export default function AnalyzePage() {
                 console.error("AI enrichment failed", e);
             }
         }
+        setIsEnriching(false);
     };
 
     const handleSaveResults = () => {
@@ -254,6 +258,12 @@ export default function AnalyzePage() {
                         <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg border">
                             <div className="text-sm text-muted-foreground">
                                 Analysis completed for <strong>{fileName}</strong>. Review alerts below.
+                                {isEnriching && (
+                                    <span className="ml-4 inline-flex items-center text-blue-500 animate-pulse">
+                                        <Brain className="mr-1.5 h-3.5 w-3.5" />
+                                        AI Analyst is reviewing critical alerts...
+                                    </span>
+                                )}
                             </div>
                             <div className="flex gap-2">
                                 <Button variant="outline" onClick={() => { setComplete(false); setFileName(null); }}>

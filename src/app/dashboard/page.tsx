@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Alert, getAlerts, clearAlerts, saveAlert } from "@/lib/storage";
@@ -205,11 +206,13 @@ export default function DashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Actions Taken</CardTitle>
-                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                        <CardTitle className="text-sm font-medium">Security Posture</CardTitle>
+                        <ShieldCheck className={`h-4 w-4 ${kpi.activeStatus === "Secure" ? "text-green-500" : "text-amber-500"}`} />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-500">{kpi.actionsTaken}</div>
+                        <div className={`text-2xl font-bold ${kpi.activeStatus === "Secure" ? "text-green-500" : "text-amber-500"}`}>
+                            {kpi.activeStatus}
+                        </div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -233,7 +236,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Charts Area */}
-            {securityAlerts.length > 0 && (
+            {securityAlerts.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-8">
                     <Card className="col-span-4 transition-all hover:shadow-md">
                         <CardHeader>
@@ -254,6 +257,21 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
+            ) : (
+                <Card className="mb-8 border-dashed">
+                    <CardContent className="py-12 flex flex-col items-center justify-center text-center">
+                        <div className="bg-muted p-4 rounded-full mb-4">
+                            <Shield className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-lg font-semibold">No Alerts Found</h3>
+                        <p className="text-muted-foreground max-w-sm">
+                            Run a log analysis or simulate an attack to see security metrics and distribution.
+                        </p>
+                        <Button variant="outline" className="mt-4" asChild>
+                            <Link href="/analyze">Go to Analysis</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             )}
 
             {/* Config & Filters */}
