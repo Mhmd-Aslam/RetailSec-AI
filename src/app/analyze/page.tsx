@@ -418,18 +418,6 @@ export default function AnalyzePage() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3 text-sm">
-                                                {canEnrichOnDemand && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-7 text-xs gap-1 border-blue-500/50 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                                        disabled={isEnrichingThisAlert}
-                                                        onClick={(e) => { e.stopPropagation(); enrichSingleAlert(alert); }}
-                                                    >
-                                                        <Brain className="h-3 w-3" />
-                                                        {isEnrichingThisAlert ? "Analyzing..." : "Analyze with AI"}
-                                                    </Button>
-                                                )}
                                                 <div className="text-muted-foreground">
                                                     {new Date(alert.timestamp).toLocaleTimeString()}
                                                 </div>
@@ -473,12 +461,39 @@ export default function AnalyzePage() {
                                         <div className="bg-muted p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
                                             {selectedAlert.aiExplanation}
                                         </div>
-                                    ) : (
-                                        <div className="text-sm text-muted-foreground italic flex items-center gap-2">
-                                            {(selectedAlert.severity === 'high' || selectedAlert.severity === 'critical') ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                                            {(selectedAlert.severity === 'high' || selectedAlert.severity === 'critical') ? "Analyzing with Groq Llama-3..." : "AI analysis skipped for low severity."}
-                                        </div>
-                                    )}
+                                    ) : (() => {
+                                        const autoEnrichedIds = generatedAlerts
+                                            .filter(a => a.severity === "critical" || a.severity === "high")
+                                            .slice(0, 3)
+                                            .map(a => a.id);
+                                        const isAutoEnriched = autoEnrichedIds.includes(selectedAlert.id);
+                                        const canEnrich = !isAutoEnriched &&
+                                            (selectedAlert.severity === "critical" || selectedAlert.severity === "high");
+                                        const isEnrichingThis = enrichingAlertIds.has(selectedAlert.id);
+
+                                        return canEnrich ? (
+                                            <div className="flex flex-col items-start gap-3">
+                                                <p className="text-sm text-muted-foreground">AI analysis not yet run for this alert.</p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="gap-1.5 border-blue-500/50 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                    disabled={isEnrichingThis}
+                                                    onClick={() => enrichSingleAlert(selectedAlert)}
+                                                >
+                                                    <Brain className="h-4 w-4" />
+                                                    {isEnrichingThis ? "Analyzing with Groq Llama-3..." : "Analyze with AI"}
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-muted-foreground italic flex items-center gap-2">
+                                                {(selectedAlert.severity === 'high' || selectedAlert.severity === 'critical') && isAutoEnriched
+                                                    ? <><Loader2 className="h-3 w-3 animate-spin" /> Analyzing with Groq Llama-3...</>
+                                                    : "AI analysis skipped for low severity."}
+                                            </div>
+                                        );
+                                    })())
+                                }
                                 </div>
 
                                 {/* Mitigation */}
