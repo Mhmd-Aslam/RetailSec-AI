@@ -20,8 +20,9 @@ export default function Home() {
           </p>
           <div className="flex flex-col gap-2 min-[400px]:flex-row">
             <Button size="lg" asChild>
-              <Link href="/analyze">
-                Start Analysis <Activity className="ml-2 h-4 w-4" />
+              <Link href="/analyze" className="flex items-center">
+                <Activity className="mr-2 h-4 w-4" />
+                Start Analysis
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>

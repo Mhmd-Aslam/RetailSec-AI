@@ -189,7 +189,7 @@ export default function DashboardPage() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
@@ -250,8 +250,8 @@ export default function DashboardPage() {
 
             {/* Charts Area */}
             {securityAlerts.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-8">
-                    <Card className="col-span-4 transition-all hover:shadow-md">
+                <div className="grid gap-4 grid-cols-1 lg:grid-cols-7 mb-8">
+                    <Card className="lg:col-span-4 transition-all hover:shadow-md">
                         <CardHeader>
                             <CardTitle>Threat Types Distribution</CardTitle>
                             <CardDescription>Breakdown of detected incidents by category.</CardDescription>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                             <ThreatTypePieChart data={threatTypeData} />
                         </CardContent>
                     </Card>
-                    <Card className="col-span-3 transition-all hover:shadow-md">
+                    <Card className="lg:col-span-3 transition-all hover:shadow-md">
                         <CardHeader>
                             <CardTitle>Severity Breakdown</CardTitle>
                             <CardDescription>Alert count by severity level.</CardDescription>
@@ -323,8 +323,9 @@ export default function DashboardPage() {
                     <CardTitle>Alerts Log</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-md border">
-                        <div className="w-full overflow-auto max-h-[600px]">
+                    <div className="rounded-md border overflow-hidden">
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block w-full overflow-auto max-h-[600px]">
                             <table className="w-full caption-bottom text-sm text-left">
                                 <thead className="[&_tr]:border-b sticky top-0 bg-background z-10">
                                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -382,6 +383,41 @@ export default function DashboardPage() {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden divide-y">
+                            {filteredAlerts.length === 0 ? (
+                                <div className="p-8 text-center text-muted-foreground">
+                                    No alerts found matching your criteria.
+                                </div>
+                            ) : (
+                                filteredAlerts.map((alert) => (
+                                    <div key={alert.id} className="p-4 space-y-3" onClick={() => setSelectedAlert(alert)}>
+                                        <div className="flex justify-between items-start">
+                                            <Badge variant={alert.severity as "critical" | "high" | "medium" | "low"}>
+                                                {alert.severity.toUpperCase()}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground">
+                                                {new Date(alert.timestamp).toLocaleTimeString()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-medium text-sm">
+                                                {alert.threatType || "Unknown"}
+                                                {alert.aiConfidence && <span className="ml-1 text-[10px] text-blue-500">★</span>}
+                                            </h4>
+                                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{alert.description}</p>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2">
+                                            <div className="text-xs font-mono text-muted-foreground">
+                                                {alert.sourceIp}
+                                            </div>
+                                            <Button variant="outline" size="sm" className="h-7 text-xs">View Details</Button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </CardContent>

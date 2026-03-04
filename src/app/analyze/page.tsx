@@ -251,7 +251,7 @@ export default function AnalyzePage() {
 
                 {complete && (
                     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                        <div className="grid gap-4 md:grid-cols-4">
+                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Logs Processed</CardTitle>
@@ -311,7 +311,7 @@ export default function AnalyzePage() {
                             </div>
                         )}
 
-                        <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg border">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-muted/30 p-4 rounded-lg border">
                             <div className="text-sm text-muted-foreground">
                                 Analysis completed for <strong>{fileName}</strong>. Review alerts below.
                                 {isEnriching && (
@@ -321,19 +321,19 @@ export default function AnalyzePage() {
                                     </span>
                                 )}
                             </div>
-                            <div className="flex gap-2">
-                                <Button variant="outline" onClick={() => { setComplete(false); setFileName(null); }}>
+                            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                                <Button variant="outline" size="sm" onClick={() => { setComplete(false); setFileName(null); }} className="flex-1 md:flex-none">
                                     Analyze New File
                                 </Button>
-                                <Button variant="outline" onClick={() => downloadReport(generatedAlerts)}>
-                                    <FileText className="mr-2 h-4 w-4" /> Report
+                                <Button variant="outline" size="sm" onClick={() => downloadReport(generatedAlerts)} className="flex-1 md:flex-none">
+                                    <FileText className="mr-1 h-4 w-4" /> Report
                                 </Button>
-                                <Button variant="destructive" onClick={handleSimulateAttack}>
-                                    <ShieldAlert className="mr-2 h-4 w-4" /> Simulate Attack
+                                <Button variant="destructive" size="sm" onClick={handleSimulateAttack} className="flex-1 md:flex-none">
+                                    <ShieldAlert className="mr-1 h-4 w-4" /> Simulate
                                 </Button>
-                                <Button onClick={handleSaveResults} disabled={isSaved}>
-                                    <Save className="mr-2 h-4 w-4" />
-                                    {isSaved ? "Saved" : "Save Results"}
+                                <Button size="sm" onClick={handleSaveResults} disabled={isSaved} className="flex-1 md:flex-none">
+                                    <Save className="mr-1 h-4 w-4" />
+                                    {isSaved ? "Saved" : "Save"}
                                 </Button>
                             </div>
                         </div>
