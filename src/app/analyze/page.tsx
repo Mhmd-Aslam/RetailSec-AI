@@ -5,7 +5,7 @@ import { z } from "zod";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { UploadCloud, AlertTriangle, Loader2, ShieldAlert, Activity, Database, Save, Play, FileText, Brain } from "lucide-react";
+import { UploadCloud, AlertTriangle, Loader2, ShieldAlert, Activity, Database, Save, Play, FileText, Brain, Copy, Check } from "lucide-react";
 import { saveAlert, Alert } from "@/lib/storage";
 import { analyzeLogs, LogEntry } from "@/lib/threatEngine";
 import { Badge } from "@/components/ui/Badge";
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { downloadReport } from "@/lib/reportGenerator";
 import { generateMaliciousLogs } from "@/lib/attackSimulator";
 import { useDemoMode } from "@/lib/demoContext";
+import { useToast } from "@/components/ui/Toast";
 
 const LogEntrySchema = z.object({
     timestamp: z.string(),
@@ -40,6 +41,8 @@ export default function AnalyzePage() {
     const [isEnriching, setIsEnriching] = useState(false);
     const [aiStatus, setAiStatus] = useState<"live" | "demo" | "fallback_no_key" | "fallback_error" | null>(null);
     const { isDemoMode } = useDemoMode();
+    const { toast } = useToast();
+    const [copied, setCopied] = useState(false);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -59,7 +62,11 @@ export default function AnalyzePage() {
             processFile(file);
         } catch (error) {
             console.error(error);
-            alert("Could not load sample data. Ensure public/sample_logs.json exists.");
+            toast({
+                title: "Load Error",
+                message: "Could not load sample data. Ensure public/sample_logs.json exists.",
+                type: "error"
+            });
         }
     };
 
@@ -95,7 +102,11 @@ export default function AnalyzePage() {
 
             } catch (error) {
                 console.error("Failed to parse", error);
-                window.alert("Invalid JSON format or schema. Expected standard log entries.");
+                toast({
+                    title: "Ingestion Error",
+                    message: "Invalid JSON format or schema. Expected standard log entries.",
+                    type: "error"
+                });
                 setIsAnalyzing(false);
                 setFileName(null);
             }
@@ -138,7 +149,11 @@ export default function AnalyzePage() {
     const handleSaveResults = () => {
         generatedAlerts.forEach(saveAlert);
         setIsSaved(true);
-        window.alert("Results saved to Dashboard!");
+        toast({
+            title: "Success",
+            message: "Results saved to Dashboard!",
+            type: "success"
+        });
     };
 
     /**
@@ -159,7 +174,18 @@ export default function AnalyzePage() {
         setGeneratedAlerts(alerts);
         enrichAlertsWithAI(alerts);
 
-        window.alert(`Simulated Attack Injected! Added ${maliciousLogs.length} malicious logs.`);
+        toast({
+            title: "Attack Simulated",
+            message: `Injected ${maliciousLogs.length} malicious logs into current session.`,
+            type: "warning"
+        });
+    };
+
+    const handleCopyMitigation = () => {
+        if (!selectedAlert?.recommendedAction) return;
+        navigator.clipboard.writeText(selectedAlert.recommendedAction);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     const stats = {
@@ -267,8 +293,8 @@ export default function AnalyzePage() {
                         {/* AI Status Banner */}
                         {aiStatus && aiStatus !== "live" && (
                             <div className={`p-4 rounded-lg border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${aiStatus === "demo"
-                                    ? "bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-900 dark:text-blue-300"
-                                    : "bg-amber-50 border-amber-100 text-amber-800 dark:bg-amber-900/20 dark:border-amber-900 dark:text-amber-300"
+                                ? "bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-900 dark:text-blue-300"
+                                : "bg-amber-50 border-amber-100 text-amber-800 dark:bg-amber-900/20 dark:border-amber-900 dark:text-amber-300"
                                 }`}>
                                 <Brain className="h-5 w-5" />
                                 <div className="text-sm">
@@ -276,7 +302,7 @@ export default function AnalyzePage() {
                                         <><strong>Demo Mode Active:</strong> Using pre-canned high-fidelity responses for presentation stability.</>
                                     )}
                                     {aiStatus === "fallback_no_key" && (
-                                        <><strong>AI Key Not Found:</strong> Using local rule-based engine. Add <code>GROQ_API_KEY</code> to <code>.env.local</code> for real-time AI analysis.</>
+                                        <><strong>AI Analysis Unavailable:</strong> Local rule-based engine active. Verify <code>GROQ_API_KEY</code> is correctly set in your server environment.</>
                                     )}
                                     {aiStatus === "fallback_error" && (
                                         <><strong>AI Service Degraded:</strong> Rate limit reached or connection issue. Temporarily using local heuristics.</>
@@ -408,7 +434,16 @@ export default function AnalyzePage() {
                                 </div>
                             </div>
 
-                            <DialogFooter>
+                            <DialogFooter className="sm:justify-between">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleCopyMitigation}
+                                    disabled={!selectedAlert.recommendedAction}
+                                >
+                                    {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Copy className="mr-2 h-4 w-4" />}
+                                    {copied ? "Copied" : "Copy Mitigation"}
+                                </Button>
                                 <Button variant="secondary" onClick={() => setSelectedAlert(null)}>Close</Button>
                             </DialogFooter>
                         </>

@@ -51,12 +51,6 @@ export function Navbar() {
                         {/* Search or other items could go here */}
                     </div>
                     <nav className="flex items-center">
-                        <Button variant="ghost" size="icon" asChild>
-                            <Link href="https://github.com/retailsec/ai" target="_blank" rel="noreferrer">
-                                <span className="sr-only">GitHub</span>
-                                {/* GitHub Icon could go here if needed, but keeping it minimal */}
-                            </Link>
-                        </Button>
                         <Button
                             variant="ghost"
                             size="icon"

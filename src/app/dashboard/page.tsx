@@ -11,22 +11,29 @@ import { SeverityBarChart, ThreatTypePieChart } from "@/components/Charts";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import { downloadReport } from "@/lib/reportGenerator";
 import { Loader2, FileText } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 export default function DashboardPage() {
     const [securityAlerts, setSecurityAlerts] = useState<Alert[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [severityFilter, setSeverityFilter] = useState<string>("all");
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+    const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         setSecurityAlerts(getAlerts());
     }, []);
 
     const handleClear = () => {
-        if (confirm("Are you sure you want to clear all alerts?")) {
-            clearAlerts();
-            setSecurityAlerts([]);
-        }
+        clearAlerts();
+        setSecurityAlerts([]);
+        setIsClearDialogOpen(false);
+        toast({
+            title: "Dashboard Cleared",
+            message: "All security alerts have been removed from local storage.",
+            type: "info"
+        });
     };
 
     const handleExport = (format: "json" | "csv") => {
@@ -149,7 +156,12 @@ export default function DashboardPage() {
 
         setSecurityAlerts(updatedAlerts);
         setSelectedAlert(prev => prev ? { ...prev, actionTaken: true, actionTimestamp: new Date().toISOString() } : null);
-        window.alert(`Simulated Action: Blocked IP ${alert.sourceIp} on Firewall.`);
+
+        toast({
+            title: "Action Executed",
+            message: `Simulated Action: Blocked IP ${alert.sourceIp} on Firewall.`,
+            type: "success"
+        });
     };
 
 
@@ -170,7 +182,7 @@ export default function DashboardPage() {
                     <Button variant="outline" size="sm" onClick={() => handleExport("csv")} disabled={securityAlerts.length === 0}>
                         <Download className="mr-2 h-4 w-4" /> CSV
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={handleClear} disabled={securityAlerts.length === 0}>
+                    <Button variant="destructive" size="sm" onClick={() => setIsClearDialogOpen(true)} disabled={securityAlerts.length === 0}>
                         <Trash2 className="mr-2 h-4 w-4" /> Clear
                     </Button>
                 </div>
@@ -447,6 +459,22 @@ export default function DashboardPage() {
                         </DialogFooter>
                     </>
                 )}
+            </Dialog>
+
+            {/* Clear Confirmation Dialog */}
+            <Dialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Clear All Alerts?</DialogTitle>
+                        <DialogDescription>
+                            This action will permanently remove all security alerts from your dashboard. This cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => setIsClearDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleClear}>Clear Everything</Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
         </div>
     );

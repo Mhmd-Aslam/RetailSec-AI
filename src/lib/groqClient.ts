@@ -1,10 +1,4 @@
-import Groq from "groq-sdk";
 import { Alert } from "./types";
-
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || "dummy_key", 
-  dangerouslyAllowBrowser: true // Ideally backend only, but for this demo on client side
-});
 
 /**
  * Structure of the AI-generated threat analysis.
@@ -41,27 +35,18 @@ function maskData(alert: Alert): string {
 }
 
 /**
- * Generates an AI-powered explanation and mitigation plan using Groq (Llama-3).
+ * Generates an AI-powered explanation and mitigation plan.
  * 
  * Implements a multi-tier fallback strategy:
- * 1. Environment Key Check -> Use local fallback if missing.
- * 2. Demo Mode Check -> Use high-fidelity canned response if active.
- * 3. Live API Call -> Mask data and consult LLM (json_object mode).
- * 4. Error Catch -> Graceful fallback to rule-based summary.
+ * 1. Demo Mode Check -> Use high-fidelity canned response if active.
+ * 2. Live API Call -> Delegate to internal server-side API route (secure).
+ * 3. Error Catch -> Graceful fallback to rule-based summary.
  * 
  * @param alert The security alert to analyze.
  * @returns Promise resolving to the AI analysis result.
  */
 export async function generateThreatExplanation(alert: Alert): Promise<AIAnalysisResult> {
-    if (!process.env.NEXT_PUBLIC_GROQ_API_KEY && !process.env.GROQ_API_KEY) {
-         console.warn("GROQ_API_KEY not found, using fallback.");
-         return {
-            ...getFallbackExplanation(alert),
-            status: "fallback_no_key"
-         };
-    }
-
-    // Check for Demo Mode
+    // Check for Demo Mode (Client-side logic)
     if (typeof window !== "undefined") {
         const isDemo = localStorage.getItem("retailsec_demo_mode") === "true";
         if (isDemo) {
@@ -71,33 +56,44 @@ export async function generateThreatExplanation(alert: Alert): Promise<AIAnalysi
 
     try {
         const maskedAlert = maskData(alert);
-        const prompt = `
-        You are a seasoned SOC Analyst. Analyze the following security alert metadata and provide a detailed explanation.
         
-        Alert Data:
-        ${maskedAlert}
-        
-        Your response MUST be in strictly valid JSON format with the following structure:
-        {
-            "explanation": "2-4 paragraphs explaining the threat in a professional SOC analyst tone.",
-            "mitigationSteps": ["Step 1", "Step 2", "Step 3"],
-            "confidence": 85 (0-100 score based on evidence strength)
-        }
-        
-        Do not include any preamble or postscript. Only the JSON object.
-        `;
-
-        const chatCompletion = await groq.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "llama3-70b-8192",
-            temperature: 0.1,
-            response_format: { type: "json_object" }
+        // Call internal API route instead of direct Groq SDK
+        const response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alertData: maskedAlert })
         });
 
-        const content = chatCompletion.choices[0]?.message?.content;
-        if (!content) throw new Error("No content from Groq");
+        if (!response.ok) {
+            const errorData = await response.json();
+            
+            // Handle specific error statuses from our backend
+            if (response.status === 401) {
+                return {
+                    ...getFallbackExplanation(alert),
+                    status: "fallback_no_key"
+                };
+            }
+            
+            if (response.status === 429) {
+                return {
+                    ...getFallbackExplanation(alert),
+                    status: "fallback_error" // UI handles this as "Rate limit reached"
+                };
+            }
 
-        const result = JSON.parse(content);
+            // General fallback for missing key or other 500 errors
+            if (response.status === 500 && errorData.error?.includes("Key not configured")) {
+                return {
+                    ...getFallbackExplanation(alert),
+                    status: "fallback_no_key"
+                };
+            }
+            throw new Error(errorData.error || "API failure");
+        }
+
+        const result = await response.json();
+        
         return {
             explanation: result.explanation || "Analysis pending detailed review.",
             mitigationSteps: result.mitigationSteps || ["Isolate affected systems.", "Review logs."],
@@ -106,7 +102,7 @@ export async function generateThreatExplanation(alert: Alert): Promise<AIAnalysi
         };
 
     } catch (error) {
-        console.error("Groq API Error:", error);
+        console.error("AI Analysis Error:", error);
         return {
             ...getFallbackExplanation(alert),
             status: "fallback_error"
