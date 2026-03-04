@@ -6,7 +6,7 @@
 
 **RetailSec AI** is a next-generation **Security Operations Center (SOC)** dashboard designed specifically for the retail sector. It leverages specialized AI agents to detect, analyze, and remediate cyber threats—ranging from credential stuffing to Point-of-Sale (POS) malware—in real-time.
 
-🌐 Live Demo: https://retailsec-ai.vercel.app/
+🌐 **Live Demo**: https://retailsec-ai.vercel.app/
 
 ---
 
