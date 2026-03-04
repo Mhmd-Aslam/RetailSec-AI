@@ -43,8 +43,8 @@ export default function AnalyzePage() {
     const { isDemoMode } = useDemoMode();
     const { toast } = useToast();
     const [copied, setCopied] = useState(false);
-    /** Tracks IDs of alerts being individually enriched on-demand. */
-    const [enrichingAlertIds, setEnrichingAlertIds] = useState<Set<string>>(new Set());
+    const [autoEnrichedIds, setAutoEnrichedIds] = useState<string[]>([]);
+    const [manualEnrichingId, setManualEnrichingId] = useState<string | null>(null);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -98,8 +98,15 @@ export default function AnalyzePage() {
                     setIsAnalyzing(false);
                     setComplete(true);
 
-                    // Initiate background AI analysis for high-priority detections
-                    enrichAlertsWithAI(alerts);
+                    // Identify top 3 alerts for auto-enrichment
+                    const autoIds = alerts
+                        .filter(a => a.severity === "critical" || a.severity === "high")
+                        .slice(0, 3)
+                        .map(a => a.id);
+                    setAutoEnrichedIds(autoIds);
+
+                    // Initiate background AI analysis
+                    enrichAlertsWithAI(alerts, autoIds);
                 }, isDemoMode ? 500 : 2000);
 
             } catch (error) {
@@ -116,16 +123,14 @@ export default function AnalyzePage() {
         reader.readAsText(file);
     };
 
-    const enrichAlertsWithAI = async (currentAlerts: Alert[]) => {
+    const enrichAlertsWithAI = async (currentAlerts: Alert[], autoIds: string[]) => {
         const { generateThreatExplanation } = await import("@/lib/groqClient");
 
         /** Throttle helper: pauses execution to avoid API rate limits. */
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // Limit to top 3 critical/high alerts to conserve API quota
-        const priorityAlerts = currentAlerts
-            .filter(a => a.severity === "critical" || a.severity === "high")
-            .slice(0, 3);
+        // Filter provided alerts down to the auto-enrichment set
+        const priorityAlerts = currentAlerts.filter(a => autoIds.includes(a.id));
 
         if (priorityAlerts.length > 0) setIsEnriching(true);
 
@@ -158,34 +163,46 @@ export default function AnalyzePage() {
         setIsEnriching(false);
     };
 
-    /**
-     * On-demand AI enrichment for a single alert (for alerts beyond the auto-enriched top 3).
-     */
-    const enrichSingleAlert = async (alert: Alert) => {
-        if (enrichingAlertIds.has(alert.id)) return;
-        setEnrichingAlertIds(prev => new Set(prev).add(alert.id));
+    const handleManualEnrich = async (alert: Alert) => {
+        if (manualEnrichingId) return; // Prevent concurrent manual requests
+        setManualEnrichingId(alert.id);
 
         try {
             const { generateThreatExplanation } = await import("@/lib/groqClient");
             const aiResult = await generateThreatExplanation(alert);
-            if (!aiStatus) setAiStatus(aiResult.status);
+            setAiStatus(aiResult.status);
 
             setGeneratedAlerts(prev => prev.map(a => {
                 if (a.id === alert.id) {
-                    return {
+                    const updatedAlert = {
                         ...a,
                         aiExplanation: aiResult.explanation,
                         aiConfidence: aiResult.confidence,
                         recommendedAction: (a.recommendedAction || "") + "\n\n" + aiResult.mitigationSteps.join("\n")
                     };
+                    // If this alert is currently selected in modal, update the selection too
+                    if (selectedAlert?.id === alert.id) {
+                        setSelectedAlert(updatedAlert);
+                    }
+                    return updatedAlert;
                 }
                 return a;
             }));
+
+            toast({
+                title: "Enrichment Complete",
+                message: "AI analysis has been added to this alert.",
+                type: "success"
+            });
         } catch (e) {
-            console.error("On-demand AI enrichment failed", e);
-            toast({ title: "AI Error", message: "Could not analyze this alert. Please try again shortly.", type: "error" });
+            console.error("Manual AI enrichment failed", e);
+            toast({
+                title: "AI Error",
+                message: "Could not generate AI analysis. Rate limit may have been reached.",
+                type: "error"
+            });
         } finally {
-            setEnrichingAlertIds(prev => { const next = new Set(prev); next.delete(alert.id); return next; });
+            setManualEnrichingId(null);
         }
     };
 
@@ -215,7 +232,13 @@ export default function AnalyzePage() {
         // Re-run analysis on the expanded log set
         const { alerts } = analyzeLogs(newLogs);
         setGeneratedAlerts(alerts);
-        enrichAlertsWithAI(alerts);
+
+        const autoIds = alerts
+            .filter(a => a.severity === "critical" || a.severity === "high")
+            .slice(0, 3)
+            .map(a => a.id);
+        setAutoEnrichedIds(autoIds);
+        enrichAlertsWithAI(alerts, autoIds);
 
         toast({
             title: "Attack Simulated",
@@ -382,54 +405,41 @@ export default function AnalyzePage() {
                         </div>
 
                         <div className="grid gap-4">
-                            {generatedAlerts.map((alert, index) => {
-                                // Identify alerts eligible for on-demand enrichment:
-                                // critical/high alerts beyond the auto-enriched top 3
-                                const autoEnrichedIds = generatedAlerts
-                                    .filter(a => a.severity === "critical" || a.severity === "high")
-                                    .slice(0, 3)
-                                    .map(a => a.id);
-                                const isAutoEnriched = autoEnrichedIds.includes(alert.id);
-                                const canEnrichOnDemand = !isAutoEnriched && !alert.aiConfidence &&
-                                    (alert.severity === "critical" || alert.severity === "high");
-                                const isEnrichingThisAlert = enrichingAlertIds.has(alert.id);
-
-                                return (
-                                    <Card
-                                        key={alert.id}
-                                        className="cursor-pointer hover:border-primary/50 transition-colors"
-                                        onClick={() => setSelectedAlert(alert)}
-                                    >
-                                        <CardContent className="p-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <Badge variant={alert.severity as "critical" | "high" | "medium" | "low"} className="w-20 justify-center">
-                                                    {alert.severity.toUpperCase()}
-                                                </Badge>
-                                                <div>
-                                                    <div className="font-semibold flex items-center gap-2">
-                                                        {alert.threatType}
-                                                        {alert.aiConfidence && (
-                                                            <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
-                                                                AI
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">{alert.description}</div>
+                            {generatedAlerts.map((alert) => (
+                                <Card
+                                    key={alert.id}
+                                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                                    onClick={() => setSelectedAlert(alert)}
+                                >
+                                    <CardContent className="p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <Badge variant={alert.severity as "critical" | "high" | "medium" | "low"} className="w-20 justify-center">
+                                                {alert.severity.toUpperCase()}
+                                            </Badge>
+                                            <div>
+                                                <div className="font-semibold flex items-center gap-2">
+                                                    {alert.threatType}
+                                                    {alert.aiConfidence && (
+                                                        <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                                                            AI
+                                                        </span>
+                                                    )}
                                                 </div>
+                                                <div className="text-sm text-muted-foreground">{alert.description}</div>
                                             </div>
-                                            <div className="flex items-center gap-3 text-sm">
-                                                <div className="text-muted-foreground">
-                                                    {new Date(alert.timestamp).toLocaleTimeString()}
-                                                </div>
-                                                <div className="w-24 text-right">
-                                                    <span className="font-mono font-bold text-lg">{alert.threatScore}</span>
-                                                    <span className="text-xs text-muted-foreground ml-1">Score</span>
-                                                </div>
+                                        </div>
+                                        <div className="flex items-center gap-6 text-sm">
+                                            <div className="text-muted-foreground">
+                                                {new Date(alert.timestamp).toLocaleTimeString()}
                                             </div>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
+                                            <div className="w-24 text-right">
+                                                <span className="font-mono font-bold text-lg">{alert.threatScore}</span>
+                                                <span className="text-xs text-muted-foreground ml-1">Score</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
                         </div>
                     </div>
                 )}
@@ -461,39 +471,28 @@ export default function AnalyzePage() {
                                         <div className="bg-muted p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
                                             {selectedAlert.aiExplanation}
                                         </div>
-                                    ) : (() => {
-                                        const autoEnrichedIds = generatedAlerts
-                                            .filter(a => a.severity === "critical" || a.severity === "high")
-                                            .slice(0, 3)
-                                            .map(a => a.id);
-                                        const isAutoEnriched = autoEnrichedIds.includes(selectedAlert.id);
-                                        const canEnrich = !isAutoEnriched &&
-                                            (selectedAlert.severity === "critical" || selectedAlert.severity === "high");
-                                        const isEnrichingThis = enrichingAlertIds.has(selectedAlert.id);
-
-                                        return canEnrich ? (
-                                            <div className="flex flex-col items-start gap-3">
-                                                <p className="text-sm text-muted-foreground">AI analysis not yet run for this alert.</p>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-1.5 border-blue-500/50 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                                    disabled={isEnrichingThis}
-                                                    onClick={() => enrichSingleAlert(selectedAlert)}
-                                                >
-                                                    <Brain className="h-4 w-4" />
-                                                    {isEnrichingThis ? "Analyzing with Groq Llama-3..." : "Analyze with AI"}
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <div className="text-sm text-muted-foreground italic flex items-center gap-2">
-                                                {(selectedAlert.severity === 'high' || selectedAlert.severity === 'critical') && isAutoEnriched
-                                                    ? <><Loader2 className="h-3 w-3 animate-spin" /> Analyzing with Groq Llama-3...</>
-                                                    : "AI analysis skipped for low severity."}
-                                            </div>
-                                        );
-                                    })())
-                                }
+                                    ) : manualEnrichingId === selectedAlert.id ? (
+                                        <div className="bg-muted/50 p-6 rounded-lg border border-dashed flex flex-col items-center justify-center gap-3 animate-pulse">
+                                            <Brain className="h-8 w-8 text-primary animate-bounce" />
+                                            <p className="text-xs font-medium">Requesting Llama-3 Analysis...</p>
+                                        </div>
+                                    ) : autoEnrichedIds.includes(selectedAlert.id) && isEnriching ? (
+                                        <div className="text-sm text-muted-foreground italic flex items-center gap-2">
+                                            <Loader2 className="h-3 w-3 animate-spin" /> Auto-analysis in progress...
+                                        </div>
+                                    ) : (
+                                        <div className="bg-muted/30 p-4 rounded-lg border flex flex-col items-center gap-3 text-center">
+                                            <p className="text-xs text-muted-foreground">AI Deep Analysis available for this threat.</p>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 text-xs gap-2"
+                                                onClick={() => handleManualEnrich(selectedAlert)}
+                                            >
+                                                <Brain className="h-3.5 w-3.5" /> Analyze with AI
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Mitigation */}
