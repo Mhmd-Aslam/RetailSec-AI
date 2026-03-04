@@ -43,6 +43,8 @@ export default function AnalyzePage() {
     const { isDemoMode } = useDemoMode();
     const { toast } = useToast();
     const [copied, setCopied] = useState(false);
+    /** Tracks IDs of alerts being individually enriched on-demand. */
+    const [enrichingAlertIds, setEnrichingAlertIds] = useState<Set<string>>(new Set());
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -154,6 +156,37 @@ export default function AnalyzePage() {
             }
         }
         setIsEnriching(false);
+    };
+
+    /**
+     * On-demand AI enrichment for a single alert (for alerts beyond the auto-enriched top 3).
+     */
+    const enrichSingleAlert = async (alert: Alert) => {
+        if (enrichingAlertIds.has(alert.id)) return;
+        setEnrichingAlertIds(prev => new Set(prev).add(alert.id));
+
+        try {
+            const { generateThreatExplanation } = await import("@/lib/groqClient");
+            const aiResult = await generateThreatExplanation(alert);
+            if (!aiStatus) setAiStatus(aiResult.status);
+
+            setGeneratedAlerts(prev => prev.map(a => {
+                if (a.id === alert.id) {
+                    return {
+                        ...a,
+                        aiExplanation: aiResult.explanation,
+                        aiConfidence: aiResult.confidence,
+                        recommendedAction: (a.recommendedAction || "") + "\n\n" + aiResult.mitigationSteps.join("\n")
+                    };
+                }
+                return a;
+            }));
+        } catch (e) {
+            console.error("On-demand AI enrichment failed", e);
+            toast({ title: "AI Error", message: "Could not analyze this alert. Please try again shortly.", type: "error" });
+        } finally {
+            setEnrichingAlertIds(prev => { const next = new Set(prev); next.delete(alert.id); return next; });
+        }
     };
 
     const handleSaveResults = () => {
@@ -349,41 +382,66 @@ export default function AnalyzePage() {
                         </div>
 
                         <div className="grid gap-4">
-                            {generatedAlerts.map((alert) => (
-                                <Card
-                                    key={alert.id}
-                                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                                    onClick={() => setSelectedAlert(alert)}
-                                >
-                                    <CardContent className="p-4 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <Badge variant={alert.severity as "critical" | "high" | "medium" | "low"} className="w-20 justify-center">
-                                                {alert.severity.toUpperCase()}
-                                            </Badge>
-                                            <div>
-                                                <div className="font-semibold flex items-center gap-2">
-                                                    {alert.threatType}
-                                                    {alert.aiConfidence && (
-                                                        <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
-                                                            AI
-                                                        </span>
-                                                    )}
+                            {generatedAlerts.map((alert, index) => {
+                                // Identify alerts eligible for on-demand enrichment:
+                                // critical/high alerts beyond the auto-enriched top 3
+                                const autoEnrichedIds = generatedAlerts
+                                    .filter(a => a.severity === "critical" || a.severity === "high")
+                                    .slice(0, 3)
+                                    .map(a => a.id);
+                                const isAutoEnriched = autoEnrichedIds.includes(alert.id);
+                                const canEnrichOnDemand = !isAutoEnriched && !alert.aiConfidence &&
+                                    (alert.severity === "critical" || alert.severity === "high");
+                                const isEnrichingThisAlert = enrichingAlertIds.has(alert.id);
+
+                                return (
+                                    <Card
+                                        key={alert.id}
+                                        className="cursor-pointer hover:border-primary/50 transition-colors"
+                                        onClick={() => setSelectedAlert(alert)}
+                                    >
+                                        <CardContent className="p-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <Badge variant={alert.severity as "critical" | "high" | "medium" | "low"} className="w-20 justify-center">
+                                                    {alert.severity.toUpperCase()}
+                                                </Badge>
+                                                <div>
+                                                    <div className="font-semibold flex items-center gap-2">
+                                                        {alert.threatType}
+                                                        {alert.aiConfidence && (
+                                                            <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                                                                AI
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground">{alert.description}</div>
                                                 </div>
-                                                <div className="text-sm text-muted-foreground">{alert.description}</div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-6 text-sm">
-                                            <div className="text-muted-foreground">
-                                                {new Date(alert.timestamp).toLocaleTimeString()}
+                                            <div className="flex items-center gap-3 text-sm">
+                                                {canEnrichOnDemand && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-7 text-xs gap-1 border-blue-500/50 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                        disabled={isEnrichingThisAlert}
+                                                        onClick={(e) => { e.stopPropagation(); enrichSingleAlert(alert); }}
+                                                    >
+                                                        <Brain className="h-3 w-3" />
+                                                        {isEnrichingThisAlert ? "Analyzing..." : "Analyze with AI"}
+                                                    </Button>
+                                                )}
+                                                <div className="text-muted-foreground">
+                                                    {new Date(alert.timestamp).toLocaleTimeString()}
+                                                </div>
+                                                <div className="w-24 text-right">
+                                                    <span className="font-mono font-bold text-lg">{alert.threatScore}</span>
+                                                    <span className="text-xs text-muted-foreground ml-1">Score</span>
+                                                </div>
                                             </div>
-                                            <div className="w-24 text-right">
-                                                <span className="font-mono font-bold text-lg">{alert.threatScore}</span>
-                                                <span className="text-xs text-muted-foreground ml-1">Score</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
