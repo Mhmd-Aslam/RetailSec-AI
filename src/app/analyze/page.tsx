@@ -116,14 +116,19 @@ export default function AnalyzePage() {
 
     const enrichAlertsWithAI = async (currentAlerts: Alert[]) => {
         const { generateThreatExplanation } = await import("@/lib/groqClient");
-        // Process top 5 high/critical alerts
+
+        /** Throttle helper: pauses execution to avoid API rate limits. */
+        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // Limit to top 3 critical/high alerts to conserve API quota
         const priorityAlerts = currentAlerts
             .filter(a => a.severity === "critical" || a.severity === "high")
-            .slice(0, 5);
+            .slice(0, 3);
 
         if (priorityAlerts.length > 0) setIsEnriching(true);
 
-        for (const alert of priorityAlerts) {
+        for (let i = 0; i < priorityAlerts.length; i++) {
+            const alert = priorityAlerts[i];
             try {
                 const aiResult = await generateThreatExplanation(alert);
                 if (!aiStatus) setAiStatus(aiResult.status);
@@ -141,6 +146,11 @@ export default function AnalyzePage() {
                 }));
             } catch (e) {
                 console.error("AI enrichment failed", e);
+            }
+
+            // Throttle: wait 1.5s between requests to stay within Groq rate limits
+            if (i < priorityAlerts.length - 1) {
+                await sleep(1500);
             }
         }
         setIsEnriching(false);
