@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { Footer } from "@/components/Footer";
 
 export default function RootLayout({
   children,
@@ -23,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={cn(inter.variable, jetbrainsMono.variable, "min-h-screen bg-background font-sans antialiased")}>
+      <body className={cn(inter.variable, jetbrainsMono.variable, "min-h-screen flex flex-col bg-background font-sans antialiased")}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -36,6 +37,7 @@ export default function RootLayout({
               <main className="flex-1">
                 {children}
               </main>
+              <Footer />
             </ToastProvider>
           </DemoProvider>
         </ThemeProvider>
